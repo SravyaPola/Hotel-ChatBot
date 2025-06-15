@@ -7,7 +7,7 @@
         <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css" />
         <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.min.js"></script>
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" />
-        <link rel="stylesheet" type="text/css" href="home.css" />
+        <!--<link rel="stylesheet" type="text/css" href="home.css" /> -->
     </head>
     <body>
         <div class="container" style="margin-left: 100px;">
@@ -223,7 +223,27 @@
                 </div>
             </div>
         </div>
-
+		
+		
+		<!-- Chat Widget MARKUP (no jQuery include here!) -->
+	    <div id="chatWidget" style="position: fixed; bottom: 20px; right: 20px; width: 320px;">
+	      <div id="chatHeader" style="background:#007bff;color:white;padding:10px;cursor:pointer;">
+	        Chat with Us
+	      </div>
+	      <div id="chatBody" style="display:none;border:1px solid #007bff;
+	          background:white;height:350px;overflow-y:auto;padding:10px;">
+	      </div>
+	      <div id="chatInput" style="border:1px solid #007bff;
+	          border-top:none;padding:5px;display:flex;display:none;">
+	        <input type="text" id="chatMsg" style="flex:1;border:none;padding:8px;"
+	               placeholder="Type a message..." />
+	        <button id="sendChat" style="border:none;padding:8px 12px;background:#007bff;color:white;">
+	          Send
+	        </button>
+	      </div>
+		</div>
+		
+		
         <!-- === Modal: Booking Confirmation === -->
         <div class="modal fade" id="bookingHotelRoomModal" tabindex="-1" role="dialog" aria-hidden="true">
             <div class="modal-dialog modal-lg modal-dialog-scrollable" role="document">
@@ -702,6 +722,45 @@
                     });
                 });
             });
+			
+			$(document).ready(function () {
+		      // === Your existing handlers (search, filter, viewDetailsBtn, modals, etc.) ===
+		      // …
+
+		      // === Chat widget handlers ===
+		      $("#chatHeader").on("click", function () {
+		        $("#chatBody, #chatInput").toggle();
+		      });
+		      $("#sendChat").on("click", function () {
+		        const msg = $("#chatMsg").val().trim();
+		        if (!msg) return;
+		        $("#chatBody").append(`<div><strong>You:</strong> ${msg}</div>`);
+		        $("#chatMsg").val("");
+		        $.ajax({
+		          url: "/api/chat",
+		          type: "POST",
+		          contentType: "application/json",
+				  dataType: "json",
+		          data: JSON.stringify({ message: msg }),
+		          success: data => {
+		            $("#chatBody").append(`<div><strong>Bot:</strong> ${data.reply}</div>`);
+		            $("#chatBody").scrollTop($("#chatBody")[0].scrollHeight);
+		          },
+		          error: () => {
+		            $("#chatBody").append("<div><em>Sorry, something went wrong.</em></div>");
+		          }
+		        });
+		      });
+		      $("#chatMsg").on("keypress", function (e) {
+		        if (e.which === 13) {
+		          $("#sendChat").click();
+		          return false;
+		        }
+		      });
+		    });
         </script>
+
+		</body>
+
     </body>
 </html>
