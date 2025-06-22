@@ -25,6 +25,13 @@
     <java.version>17</java.version>
     <spring-ai.version>1.0.0</spring-ai.version>
   </properties>
+  
+  <repositories>
+  <repository>
+    <id>spring-milestones</id>
+    <url>https://repo.spring.io/milestone</url>
+  </repository>
+</repositories>
 
   <!-- Import Spring AI BOM -->
   <dependencyManagement>
@@ -53,6 +60,14 @@
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-oauth2-client</artifactId>
     </dependency>
+    
+    
+    <dependency>
+  <groupId>org.apache.commons</groupId>
+  <artifactId>commons-text</artifactId>
+  <version>1.9</version>
+</dependency>
+
 
     <!-- Spring AI modules -->
     <dependency>
@@ -67,6 +82,34 @@
       <groupId>org.springframework.ai</groupId>
       <artifactId>spring-ai-starter-vector-store-pgvector</artifactId>
     </dependency>
+    
+    <dependency>
+  <groupId>com.google.code.gson</groupId>
+  <artifactId>gson</artifactId>
+  <version>2.10.1</version>
+</dependency>
+
+<dependency>
+  <groupId>org.springframework.ai</groupId>
+  <artifactId>spring-ai-openai</artifactId>
+  <version>1.0.0</version>
+  <exclusions>
+    <exclusion>
+      <groupId>com.theokanning.openai-gpt3-java</groupId>
+      <artifactId>api</artifactId>
+    </exclusion>
+    <exclusion>
+      <groupId>com.theokanning.openai-gpt3-java</groupId>
+      <artifactId>client</artifactId>
+    </exclusion>
+    <exclusion>
+      <groupId>com.theokanning.openai-gpt3-java</groupId>
+      <artifactId>service</artifactId>
+    </exclusion>
+  </exclusions>
+</dependency>
+
+
 
     <!-- Devtools -->
     <dependency>
@@ -94,28 +137,47 @@
 	  <artifactId>hibernate-vector</artifactId>
 	  <version>6.6.15.Final</version>
 	</dependency>
+	<dependency>
+      <groupId>io.jsonwebtoken</groupId>
+      <artifactId>jjwt-api</artifactId>
+      <version>0.11.5</version>
+    </dependency>
+    <dependency>
+      <groupId>io.jsonwebtoken</groupId>
+      <artifactId>jjwt-impl</artifactId>
+      <version>0.11.5</version>
+      <scope>runtime</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.jsonwebtoken</groupId>
+      <artifactId>jjwt-jackson</artifactId>
+      <version>0.11.5</version>
+      <scope>runtime</scope>
+    </dependency>
 
 
     <!-- OpenAI Java client -->
-	   <dependency>
-	  <groupId>com.theokanning.openai-gpt3-java</groupId>
-	  <artifactId>api</artifactId>
-	  <version>0.18.2</version>
-	</dependency>
-	<dependency>
-	  <groupId>com.theokanning.openai-gpt3-java</groupId>
-	  <artifactId>client</artifactId>
-	  <version>0.18.2</version>
-	</dependency>
-	<dependency>
-	  <groupId>com.theokanning.openai-gpt3-java</groupId>
-	  <artifactId>service</artifactId>
-	  <version>0.18.2</version>
-	</dependency>
+<dependency>
+  <groupId>com.theokanning.openai-gpt3-java</groupId>
+  <artifactId>api</artifactId>
+  <version>0.18.2</version>
+</dependency>
+<dependency>
+  <groupId>com.theokanning.openai-gpt3-java</groupId>
+  <artifactId>client</artifactId>
+  <version>0.18.2</version>
+</dependency>
+<dependency>
+  <groupId>com.theokanning.openai-gpt3-java</groupId>
+  <artifactId>service</artifactId>
+  <version>0.18.2</version>
+</dependency>
+
 	<dependency>
   <groupId>com.fasterxml.jackson.core</groupId>
   <artifactId>jackson-databind</artifactId>
 </dependency>
+
     <!-- Testing -->
     <dependency>
       <groupId>org.springframework.boot</groupId>

@@ -1,332 +1,367 @@
 package com.synex.service;
 
 import com.synex.domain.*;
-import com.synex.repository.*;
-import com.theokanning.openai.completion.chat.*;
-import com.theokanning.openai.service.OpenAiService;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.MessageSource;
+import com.synex.domain.ConversationState.Stage;
+import com.synex.domain.ParseResult.Intent;
+import com.synex.repository.HotelRepository;
+import com.synex.repository.RoomTypeRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import java.text.MessageFormat;
-import java.time.LocalDate;
 import java.util.*;
-import java.util.regex.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 @Service
 public class ChatService {
 
-  private final EmbeddingService              embeddingService;
-  private final OpenAiService                 openAiService;
-  private final DocumentRepository            docRepo;
-  private final HotelRepository               hotelRepo;
-  private final AmenityRepository             amenityRepo;
-  private final HotelRoomRepository           roomRepo;
-  private final BookingRepository             bookingRepo;
-  private final FeedbackRepository            feedbackRepo;
-  private final ServiceRequestRepository      serviceReqRepo;
-  private final MessageSource                 messages;
-  private final int                           topK;
-  private final String                        chatModel;
+	@Autowired
+	private NLPService nlp;
+	@Autowired
+	private HotelService hotelService;
+	@Autowired
+	private BookingService bookingService;
+	@Autowired
+	private HotelRepository hotelRepo;
+	@Autowired
+	private RoomTypeRepository roomTypeRepo;
 
-  public ChatService(
-    EmbeddingService embeddingService,
-    OpenAiService    openAiService,
-    DocumentRepository docRepo,
-    HotelRepository    hotelRepo,
-    AmenityRepository  amenityRepo,
-    HotelRoomRepository roomRepo,
-    BookingRepository   bookingRepo,
-    FeedbackRepository  feedbackRepo,
-    ServiceRequestRepository serviceReqRepo,
-    MessageSource      messages,
-    @Value("${chatbot.topk}")   int topK,
-    @Value("${chatbot.model}")  String chatModel
-  ) {
-    this.embeddingService = embeddingService;
-    this.openAiService    = openAiService;
-    this.docRepo          = docRepo;
-    this.hotelRepo        = hotelRepo;
-    this.amenityRepo      = amenityRepo;
-    this.roomRepo         = roomRepo;
-    this.bookingRepo      = bookingRepo;
-    this.feedbackRepo     = feedbackRepo;
-    this.serviceReqRepo   = serviceReqRepo;
-    this.messages         = messages;
-    this.topK             = topK;
-    this.chatModel        = chatModel;
-  }
+	private static final Logger log = LoggerFactory.getLogger(ChatService.class);
 
-  /** Entry point called by your ChatController **/
-  public ChatResponse chat(ChatRequest req) {
-    String userMessage = req.getMessage();
-    String language    = req.getLanguage();
-    DialogState state  = Optional.ofNullable(req.getState())
-                                 .orElse(new DialogState());
+	public ChatResponse chat(ChatRequest req) {
+		String user = req.getMessage();
+		ConversationState st = Optional.ofNullable(req.getState()).orElse(new ConversationState());
+		ParseResult pr = nlp.parse(user, st.getStage().name());
+		mergeSlots(st, pr);
 
-    Locale locale = Locale.forLanguageTag(language);
-    String lower  = userMessage.toLowerCase();
+		// Universal user requests (cancel, restart, etc) can go here...
 
-    // 1) FAQ via vector search
-    if (lower.matches(".*\\b(check[- ]?in|check[- ]?out|price|amenit|wifi)\\b.*")) {
-      return handleFaq(userMessage, locale, state);
-    }
+		// "Smart" stage logic — fill all available slots at once, moving as far as
+		// possible
+		// Keep looping forward as long as possible
+		outer: while (true) {
+			switch (st.getStage()) {
+			case START:
+				st.setStage(Stage.ASK_CITY);
+				return new ChatResponse("Hi there! Welcome to StaySmart Hotels. Which city/state?", false,
+						hotelService.getAllCities(), st);
 
-    // 2) Any “hotel” query goes to our combined filter
-    if (state.isInHotelFlow() || lower.contains("hotel")) {
-      state.setInHotelFlow(true);
-      return handleHotelSearch(userMessage, locale, state);
-    }
+			case ASK_CITY:
+				if (st.getCity() == null)
+					break outer;
+				st.setStage(Stage.ASK_DATES);
+				// but...maybe user gave dates too, so fall through!
 
-    // 3) Booking assistance (stub)
-    if (lower.contains("book") || lower.contains("reserve") || lower.contains("availability")) {
-      return handleBooking(userMessage, locale, state);
-    }
+			case ASK_DATES:
+				if (st.getCheckIn() == null || st.getCheckOut() == null) {
+					return new ChatResponse("When will you check in/out? (e.g. May 5, 2025 to May 8, 2025)", false,
+							List.of("May 5, 2025 to May 8, 2025"), st);
+				}
+				st.setStage(Stage.ASK_GUESTS);
 
-    // 4) Feedback / complaints
-    if (lower.contains("feedback") || lower.contains("complaint")) {
-      return handleFeedback(userMessage, locale, state);
-    }
+			case ASK_GUESTS:
+				if (st.getGuests() == null) {
+					return new ChatResponse("How many guests?", false, List.of("2 adults"), st);
+				}
+				st.setStage(Stage.ASK_FILTERS);
 
-    // 5) Service requests (towel, spa, housekeeping…)
-    if (lower.matches(".*\\b(towel|spa|housekeep|clean)\\b.*")) {
-      return handleServiceRequest(userMessage, locale, state);
-    }
+			case ASK_FILTERS:
+				// Slot filling for filters
+				String rawFilt = Optional.ofNullable(pr.getRawText()).map(String::toLowerCase).orElse("");
+				if (rawFilt.contains("no filters")) {
+					st.setMinStars(null);
+					st.setMinPrice(null);
+					st.setMaxPrice(null);
+					st.getRequiredAmenities().clear();
+				} else {
+					if (pr.getMinStars() != null)
+						st.setMinStars(pr.getMinStars());
+					if (pr.getMinPrice() != null)
+						st.setMinPrice(pr.getMinPrice());
+					if (pr.getMaxPrice() != null)
+						st.setMaxPrice(pr.getMaxPrice());
+					if (pr.getAmenities() != null)
+						st.setRequiredAmenities(new HashSet<>(pr.getAmenities()));
+				}
 
-    // 6) Smart recommendations
-    if (lower.contains("recommend") || lower.contains("suggest")) {
-      return handleRecommendations(userMessage, locale, state);
-    }
+				List<Hotel> base = hotelService.searchByNameOrLocation(st.getCity());
+				List<Hotel> matches = hotelService.filter(base, st.getMinStars(), st.getMinPrice(), st.getMaxPrice(),
+						st.getRequiredAmenities());
+				if (matches.isEmpty()) {
+					st.setStage(Stage.ASK_FILTER_REFINE);
+					return new ChatResponse("No hotels found with those filters. Remove filters? (yes/no)", false,
+							List.of("yes", "no"), st);
+				}
 
-    // 7) Fallback to full AI chat
-    return handleAiFallback(userMessage, locale, state);
-  }
+				st.setLastHotels(matches);
+				st.setStage(Stage.SHOW_HOTELS);
 
-  // 1) FAQ via vector search
-  private ChatResponse handleFaq(String q, Locale locale, DialogState state) {
-    float[] vec = embeddingService.embed(q);
-    var docs = docRepo.findTopKSimilar(vec, topK);
-    if (docs.isEmpty()) {
-      String msg = messages.getMessage("faq.not_found", null, locale);
-      return new ChatResponse(msg, false, List.of("Book a room", "Amenities"), state);
-    }
-    String context     = docs.stream()
-                              .map(KnowledgeDocument::getContent)
-                              .collect(Collectors.joining("\n---\n"));
-    String systemPrompt = messages.getMessage("faq.system_prompt", new Object[]{context}, locale);
-    String aiReply      = askOpenAi(systemPrompt, q);
-    return new ChatResponse(aiReply, false, List.of("Book a room", "More info"), state);
-  }
+			case SHOW_HOTELS: {
+				List<Hotel> hotels = st.getLastHotels();
+				if (hotels == null || hotels.isEmpty()) {
+					hotels = hotelService.searchByNameOrLocation(st.getCity());
+					st.setLastHotels(hotels);
+				}
+				String raw = Optional.ofNullable(pr.getRawText()).orElse("").trim();
+				Hotel chosen = null;
+				// Try numeric index
+				if (pr.getHotelIndex() != null) {
+					int idx = pr.getHotelIndex();
+					if (idx >= 1 && idx <= hotels.size()) {
+						chosen = hotels.get(idx - 1);
+						st.setSelectedHotelIndex(idx);
+					}
+				}
+				// Try exact-name/substring match
+				if (chosen == null && !raw.isBlank()) {
+					String lowerRaw = raw.toLowerCase();
+					for (int i = 0; i < hotels.size(); i++) {
+						Hotel h = hotels.get(i);
+						String lowerName = h.getHotelName().toLowerCase();
+						if (lowerName.equals(lowerRaw) || lowerName.contains(lowerRaw)) {
+							chosen = h;
+							st.setSelectedHotelIndex(i + 1);
+							break;
+						}
+					}
+				}
+				if (chosen != null) {
+					st.setChosenHotel(chosen);
+					st.setHotelName(chosen.getHotelName());
+					st.setHotelId(chosen.getHotelId());
+					st.setStage(Stage.SHOW_AMENITIES);
+					continue outer; // try next stage immediately (for slot-filling)
+				}
+				// Prompt for choice if not chosen
+				List<String> suggestions = new ArrayList<>();
+				StringBuilder prompt = new StringBuilder(
+						"Which hotel would you like to book? Reply with its *number* or *full name*:\n");
+				for (int i = 0; i < hotels.size(); i++) {
+					Hotel h = hotels.get(i);
+					prompt.append(String.format("%d. %s — %d★, $%.2f/night\n", i + 1, h.getHotelName(),
+							h.getStarRating(), h.getAveragePrice()));
+					suggestions.add(String.valueOf(i + 1));
+					suggestions.add(h.getHotelName());
+				}
+				return new ChatResponse(prompt.toString().trim(), false, suggestions, st);
+			}
 
-  // 2) Hotel Search with step-by-step prompting
-  private ChatResponse handleHotelSearch(String text, Locale locale, DialogState state) {
-    Filters f = parseFilters(text);
+			case SHOW_AMENITIES: {
+				Hotel hotel = st.getChosenHotel();
+				if (hotel == null && st.getHotelId() != null) {
+					hotel = hotelRepo.findById(st.getHotelId()).orElse(null);
+					st.setChosenHotel(hotel);
+				}
+				if (hotel == null) {
+					st.setStage(Stage.SHOW_HOTELS);
+					continue outer;
+				}
+				List<String> ams = hotelService.getAmenityNamesForHotel(hotel.getHotelId());
+				List<ServiceOption> opts = hotelService.getServiceOptions(hotel.getHotelId());
+				st.setLastServiceOptions(opts);
+				st.setStage(Stage.ASK_SERVICES);
+				StringBuilder out = new StringBuilder().append("Excellent choice! Here are the key amenities at ")
+						.append(hotel.getHotelName()).append(":\n");
+				for (String a : ams)
+					out.append(" • ").append(a).append("\n");
+				out.append("Any add-on services?\n");
+				for (int i = 0; i < opts.size(); i++) {
+					ServiceOption s = opts.get(i);
+					out.append(String.format("%d. %s (+$%.2f%s)\n", i + 1, s.getName(), s.getPrice(),
+							s.getPerPerson() ? "/person" : ""));
+				}
+				List<String> suggestions = new ArrayList<>();
+				for (int i = 0; i < opts.size(); i++) {
+					suggestions.add(String.valueOf(i + 1));
+					suggestions.add(opts.get(i).getName());
+				}
+				suggestions.add("No, thanks");
+				return new ChatResponse(out.toString().trim(), false, suggestions, st);
+			}
 
-    // 2.1) Ask for location if missing
-    if (f.location == null) {
-      String askLoc = messages.getMessage("hotel.ask_location", null, locale);
-      return new ChatResponse(askLoc, false, List.of("Hotels in CA", "Hotels in TX"), state);
-    }
-    state.setLocation(f.location);
+			case ASK_SERVICES: {
+				List<ServiceOption> all = st.getLastServiceOptions();
+				List<ServiceOption> picked = new ArrayList<>();
+				String raw = Optional.ofNullable(pr.getRawText()).orElse("").trim();
+				// No services
+				if (pr.getIntent() == Intent.SERVICES_NONE || raw.equalsIgnoreCase("no")
+						|| raw.equalsIgnoreCase("no, thanks")
+						|| (pr.getServiceIndices() != null && pr.getServiceIndices().isEmpty())) {
+					st.setChosenServiceOptions(Collections.emptyList());
+					st.setChosenServices(Collections.emptyList());
+				} else {
+					Set<Integer> numbers = new HashSet<>();
+					Matcher numMatch = Pattern.compile("\\b(\\d+)\\b").matcher(raw);
+					while (numMatch.find()) {
+						numbers.add(Integer.parseInt(numMatch.group(1)));
+					}
+					for (Integer idx : numbers) {
+						if (idx >= 1 && idx <= all.size()) {
+							picked.add(all.get(idx - 1));
+						}
+					}
+					String[] parts = raw.split("(,| and )");
+					for (String part : parts) {
+						String candidate = part.trim();
+						for (ServiceOption so : all) {
+							if (so.getName().equalsIgnoreCase(candidate)) {
+								if (!picked.contains(so))
+									picked.add(so);
+							}
+						}
+					}
+					st.setChosenServiceOptions(picked);
+					st.setChosenServices(picked.stream().map(ServiceOption::getName).collect(Collectors.toList()));
+				}
+				// If valid selection, move forward, else reprompt
+				if (st.getChosenServiceOptions().isEmpty() && !raw.isEmpty()
+						&& pr.getIntent() != Intent.SERVICES_NONE) {
+					List<String> opts = IntStream.rangeClosed(1, all.size())
+							.mapToObj(i -> i + ". " + all.get(i - 1).getName()).collect(Collectors.toList());
+					return new ChatResponse(
+							"Please pick one or more numbers or exact service *names* (not description), or say “no, thanks.”\n"
+									+ opts.stream().collect(Collectors.joining("\n")),
+							false, all.stream().map(ServiceOption::getName).collect(Collectors.toList()), st);
+				}
+				st.setStage(Stage.ASK_ROOM_TYPE);
+				continue outer;
+			}
 
-    // 2.2) Ask for max price if missing
-    if (f.maxPrice == null) {
-      String askPrice = messages.getMessage("hotel.ask_max_price", null, locale);
-      return new ChatResponse(askPrice, false, List.of("Under $200", "Below $150"), state);
-    }
-    state.setMaxPrice(f.maxPrice);
+			case ASK_ROOM_TYPE: {
+				List<HotelRoom> rooms = hotelService.getRoomsForHotel(st.getChosenHotel().getHotelId());
+				String raw = Optional.ofNullable(pr.getRawText()).orElse("").trim();
+				HotelRoom chosenRoom = null;
+				if (pr.getHotelIndex() != null) {
+					int idx = pr.getHotelIndex();
+					if (idx >= 1 && idx <= rooms.size()) {
+						chosenRoom = rooms.get(idx - 1);
+					}
+				}
+				if (chosenRoom == null && !raw.isBlank()) {
+					for (HotelRoom r : rooms) {
+						if (r.getType().getName().equalsIgnoreCase(raw)) {
+							chosenRoom = r;
+							break;
+						}
+					}
+				}
+				if (chosenRoom != null) {
+					st.setChosenRoom(chosenRoom);
+					st.setStage(Stage.ASK_NUM_ROOMS);
+					continue outer;
+				}
+				List<String> opts = new ArrayList<>();
+				for (int i = 0; i < rooms.size(); i++) {
+					opts.add(String.valueOf(i + 1));
+					opts.add(rooms.get(i).getType().getName());
+				}
+				return new ChatResponse("Please pick a room type by number or name:", false, opts, st);
+			}
 
-    // 2.3) Ask for min stars if missing
-    if (f.minStars == null) {
-      String askStars = messages.getMessage("hotel.ask_min_stars", null, locale);
-      return new ChatResponse(askStars, false, List.of("4 stars", "5 stars"), state);
-    }
-    state.setMinStars(f.minStars);
+			case ASK_NUM_ROOMS: {
+				Matcher m = Pattern.compile("(\\d+)").matcher(pr.getRawText());
+				if (m.find()) {
+					int noRooms = Integer.parseInt(m.group(1));
+					st.setNoRooms(noRooms);
+					st.setStage(Stage.ASK_CUSTOMER_NAME);
+					continue outer;
+				}
+				return new ChatResponse("How many rooms? Please reply with a number.", false,
+						List.of("1", "2", "3", "4"), st);
+			}
 
-    // 2.4) Ask for amenities if none yet
-    if (f.amenities.isEmpty()) {
-      String askAms = messages.getMessage("hotel.ask_amenities", null, locale);
-      return new ChatResponse(askAms, false, List.of("WiFi", "Free parking", "Spa"), state);
-    }
-    state.setAmenities(f.amenities);
+			case ASK_CUSTOMER_NAME: {
+				String customer = Optional.ofNullable(pr.getRawText()).orElse("").trim();
+				if (!customer.isBlank()) {
+					st.setCustomerName(customer);
+					Booking b = bookingService.create(st.getChosenHotel().getHotelId(),
+							st.getChosenRoom().getHotelRoomId(), st.getNoRooms(), st.getGuests(), st.getCheckIn(),
+							st.getCheckOut(), st.getCustomerName(), String.join(",", st.getChosenServices()));
+					st.getBookingIds().add(b.getBookingId());
+					st.setStage(Stage.SHOW_SUBTOTAL);
+					continue outer;
+				}
+				return new ChatResponse("Please tell me the name for the reservation.", false, Collections.emptyList(),
+						st);
+			}
 
-    // 2.5) Perform actual search
-    List<Hotel> candidates = hotelRepo
-      .findByHotelNameContainingIgnoreCaseOrCityContainingIgnoreCaseOrStateContainingIgnoreCase(
-        state.getLocation(), state.getLocation(), state.getLocation()
-      );
-    List<Hotel> matches = candidates.stream()
-      .filter(h ->
-        h.getAveragePrice() <= state.getMaxPrice() &&
-        h.getStarRating()  >= state.getMinStars()  &&
-        h.getAmenities().stream()
-          .map(Amenity::getName)
-          .map(String::toLowerCase)
-          .collect(Collectors.toSet())
-          .containsAll(state.getAmenities())
-      )
-      .collect(Collectors.toList());
+			case SHOW_SUBTOTAL: {
+				if (Boolean.TRUE.equals(pr.getConfirm())) {
+					Booking b = bookingService.create(st.getChosenHotel().getHotelId(),
+							st.getChosenRoom().getHotelRoomId(), st.getNoRooms(), st.getGuests(), st.getCheckIn(),
+							st.getCheckOut(), st.getCustomerName(), String.join(",", st.getChosenServices()));
+					st.getBookingIds().add(b.getBookingId());
+				}
+				st.setStage(Stage.ASK_ANOTHER);
+				continue outer;
+			}
 
-    if (matches.isEmpty()) {
-      String none = messages.getMessage("hotel.none", new Object[]{state.getLocation()}, locale);
-      state.setInHotelFlow(false);
-      return new ChatResponse(none, false, List.of("Try another search"), state);
-    }
+			case ASK_ANOTHER:
+				if (Boolean.TRUE.equals(pr.getConfirm())) {
+					st.setStage(Stage.ASK_CITY);
+					return new ChatResponse("Next city/state?", false, hotelService.getAllCities(), st);
+				}
+				st.setStage(Stage.ASK_PAYMENT);
+				continue outer;
 
-    String header = messages.getMessage("hotel.list_header", new Object[]{state.getLocation()}, locale);
-    StringBuilder sb = new StringBuilder(header).append("\n\n");
-    for (Hotel h : matches) {
-      sb.append("• ").append(h.getHotelName())
-        .append(" (").append(h.getCity()).append(", ").append(h.getState()).append(")\n")
-        .append("    Price: $").append(h.getAveragePrice())
-        .append(", Stars: ").append(h.getStarRating()).append("\n");
-      String ams = h.getAmenities().stream()
-                    .map(Amenity::getName)
-                    .collect(Collectors.joining(", "));
-      sb.append("    Amenities: ").append(ams.isBlank()?"N/A":ams).append("\n\n");
-    }
+			case ASK_PAYMENT:
+				if (Boolean.FALSE.equals(pr.getConfirm())) {
+					st = new ConversationState();
+					return new ChatResponse("Restarting. Which city/state?", false, hotelService.getAllCities(), st);
+				}
+				if (pr.getIntent() == Intent.PAY) {
+					double total = bookingService.computeTotal(st.getBookingIds());
+					st.setStage(Stage.ASK_FEEDBACK);
+					return new ChatResponse("Charged $" + total + ". Thanks! Rate us? (1–5)", false,
+							List.of("1", "2", "3", "4", "5"), st);
+				}
+				return new ChatResponse("Say “pay” or “no”.", false, List.of("pay", "no"), st);
 
-    state.setInHotelFlow(false);
-    return new ChatResponse(sb.toString().trim(), false,
-                            List.of("Book first hotel", "More details"),
-                            state);
-  }
+			case ASK_FEEDBACK:
+				if (pr.getRating() != null) {
+					st.setStage(Stage.DONE);
+					return new ChatResponse("Thank you! Have a great trip!", true, List.of(), st);
+				}
+				return new ChatResponse("Rate 1–5 please.", false, List.of("1", "2", "3", "4", "5"), st);
 
-  // Pull out location, maxPrice, minStars & DB‐driven amenities
-  private Filters parseFilters(String text) {
-    Filters f = new Filters();
-    String lower = text.toLowerCase();
+			default:
+				return new ChatResponse("Goodbye!", true, List.of(), st);
+			}
+		} // end while
+			// Fallback: prompt for missing info (shouldn't reach here)
+		return new ChatResponse("Please continue.", false, List.of(), st);
+	}
 
-    Matcher mLoc   = Pattern.compile("in ([a-z ]+)", Pattern.CASE_INSENSITIVE).matcher(text);
-    Matcher mPrice = Pattern.compile("(?:under|below|max) \\$?(\\d+\\.?\\d*)").matcher(lower);
-    Matcher mStar  = Pattern.compile("(\\d)\\s*(?:-star|stars?)").matcher(lower);
-
-    if (mLoc.find())   f.location = mLoc.group(1).trim();
-    if (mPrice.find()) f.maxPrice = Double.parseDouble(mPrice.group(1));
-    if (mStar.find())  f.minStars = Integer.parseInt(mStar.group(1));
-
-    var allAms = amenityRepo.findAll().stream()
-                 .map(a -> a.getName().toLowerCase())
-                 .collect(Collectors.toList());
-    for (String am : allAms) {
-      if (lower.contains(am)) {
-        f.amenities.add(am);
-      }
-    }
-    return f;
-  }
-  private static class Filters {
-    String      location = null;
-    Double      maxPrice = null;
-    Integer     minStars = null;
-    Set<String> amenities = new HashSet<>();
-  }
-
-  // 3) Booking assistance (stub)
-  private ChatResponse handleBooking(String text, Locale locale, DialogState state) {
-    String ask = messages.getMessage("booking.ask_details", null, locale);
-    return new ChatResponse(ask, false, List.of("123,2025-06-20,2025-06-22,2"), state);
-  }
-
-  // when you have structured booking details …
-  public ChatResponse listRoomOptions(
-      Integer hotelId,
-      LocalDate checkIn,
-      LocalDate checkOut,
-      int roomsRequested,
-      DialogState state,
-      Locale locale
-  ) {
-    var rooms = roomRepo.findByHotel_HotelId(hotelId).stream()
-      .filter(r ->
-        bookingRepo.countBookedRooms(r.getHotelRoomId(), checkIn, checkOut)
-        + roomsRequested
-        <= r.getNoRooms()
-      ).collect(Collectors.toList());
-
-    if (rooms.isEmpty()) {
-    	  String none = messages.getMessage("booking.none", null, locale);
-    	  return new ChatResponse(
-    	    none,
-    	    false,
-    	    List.of("Try other dates"),
-    	    state           // ← pass the current dialog‐state back
-    	  );
-    	}
-
-    	String header = messages.getMessage("booking.options_header", null, locale);
-    	String body = rooms.stream().limit(3)
-    	    .map(r -> MessageFormat.format(
-    	          messages.getMessage("booking.option_format", null, locale),
-    	          r.getType().getName(),
-    	          r.getPrice(),
-    	          r.getNoRooms()
-    	    ))
-    	    .collect(Collectors.joining("\n"));
-
-    	return new ChatResponse(
-    	  header + "\n" + body,
-    	  false,
-    	  List.of("Confirm first option","Contact agent"),
-    	  state          // ← and here too
-    	);
-  }
-
-  // 4) Feedback / complaints
-  private ChatResponse handleFeedback(String text, Locale locale, DialogState state) {
-    feedbackRepo.save(new Feedback(text));
-    String thanks = messages.getMessage("feedback.thanks", null, locale);
-    return new ChatResponse(thanks, true, List.of("Talk to agent"), state);
-  }
-
-  // 5) Hotel service requests
-  private ChatResponse handleServiceRequest(String text, Locale locale, DialogState state) {
-    serviceReqRepo.save(new ServiceRequest(text));
-    String ack = messages.getMessage("service.ack", null, locale);
-    return new ChatResponse(ack, false, List.of("Anything else?"), state);
-  }
-
-  // 6) Smart recommendations from your docs
-  private ChatResponse handleRecommendations(String text, Locale locale, DialogState state) {
-    float[] vec = embeddingService.embed(text);
-    var docs = docRepo.findTopKSimilar(vec, topK);
-    String recs = docs.stream().limit(5)
-                 .map(KnowledgeDocument::getContent)
-                 .collect(Collectors.joining("\n• ", "\n• ", ""));
-    return new ChatResponse(
-      messages.getMessage("recs.header", null, locale) + recs,
-      false,
-      List.of("Book now", "More recs"),
-      state
-    );
-  }
-
-  // 7) Fallback to full ChatGPT conversational path
-  private ChatResponse handleAiFallback(String text, Locale locale, DialogState state) {
-    float[] vec = embeddingService.embed(text);
-    var docs = docRepo.findTopKSimilar(vec, topK);
-    String ctx = docs.stream()
-                     .map(KnowledgeDocument::getContent)
-                     .collect(Collectors.joining("\n---\n"));
-    String system = messages.getMessage("fallback.system_prompt", new Object[]{ctx}, locale);
-    String reply = askOpenAi(system, text);
-    return new ChatResponse(reply, false, List.of("Book a room", "Human help"), state);
-  }
-
-  // helper to fire the OpenAI chat API
-  private String askOpenAi(String systemPrompt, String userText) {
-    var msgs = List.of(
-      new ChatMessage("system", systemPrompt),
-      new ChatMessage("user",   userText)
-    );
-    var req = ChatCompletionRequest.builder()
-                  .model(chatModel)
-                  .messages(msgs)
-                  .temperature(0.2)
-                  .build();
-    ChatCompletionChoice c = openAiService
-      .createChatCompletion(req)
-      .getChoices().get(0);
-    return c.getMessage().getContent().trim();
-  }
+	private void mergeSlots(ConversationState st, ParseResult pr) {
+		// Overwrite slot with any new values (enables corrections and out-of-order
+		// info)
+		if (pr.getCity() != null)
+			st.setCity(pr.getCity());
+		if (pr.getState() != null)
+			st.setState(pr.getState());
+		if (pr.getCheckIn() != null)
+			st.setCheckIn(pr.getCheckIn());
+		if (pr.getCheckOut() != null)
+			st.setCheckOut(pr.getCheckOut());
+		if (pr.getGuests() != null)
+			st.setGuests(pr.getGuests());
+		if (pr.getMinStars() != null)
+			st.setMinStars(pr.getMinStars());
+		if (pr.getMinPrice() != null)
+			st.setMinPrice(pr.getMinPrice());
+		if (pr.getMaxPrice() != null)
+			st.setMaxPrice(pr.getMaxPrice());
+		if (pr.getAmenities() != null)
+			st.setRequiredAmenities(new HashSet<>(pr.getAmenities()));
+		if (pr.getServiceQuantityDays() != null)
+			st.setServiceQuantityDays(pr.getServiceQuantityDays());
+		if (pr.getRoomType() != null)
+			st.setRoomType(pr.getRoomType());
+		// if (pr.getNoRooms() != null) st.setNoRooms(pr.getNoRooms());
+		// if (pr.getCustomerName() != null) st.setCustomerName(pr.getCustomerName());
+		// add payment fields as needed
+	}
 }

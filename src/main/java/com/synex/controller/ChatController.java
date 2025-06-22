@@ -1,35 +1,30 @@
 package com.synex.controller;
 
-import com.synex.domain.ChatRequest;
-import com.synex.domain.ChatResponse;
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
 import com.synex.service.ChatService;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import com.synex.service.ChatService2;
+import com.synex.service.ChatService3;
+import com.synex.service.RoomTypeService;
+import com.synex.domain.*;
 
 @RestController
 @RequestMapping("/api/chat")
 public class ChatController {
 
-    private final ChatService chatService;
+	@Autowired
+	private ChatService3 chatService;
 
-    public ChatController(ChatService chatService) {
-        this.chatService = chatService;
-    }
+	@PostMapping
+	public ChatResponse chat(@RequestBody ChatRequest request) {
+		// If no state provided, ChatService will start at START
+		return chatService.chat(request);
+	}
 
-    @PostMapping
-    public ResponseEntity<ChatResponse> chat(
-        @RequestBody ChatRequest req,
-        @RequestHeader(name = "Accept-Language", required = false, defaultValue = "en")
-            String language
-    ) {
-        // push the header value into your request DTO
-        req.setLanguage(language);
-
-        // now call the single-arg service method
-        ChatResponse serviceResp = chatService.chat(req);
-
-        // wrap it back into your outbound DTO
-       
-        return ResponseEntity.ok(serviceResp);
-    }
 }

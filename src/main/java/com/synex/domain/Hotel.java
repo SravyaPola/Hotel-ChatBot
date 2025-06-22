@@ -6,6 +6,7 @@ import java.util.stream.Collectors;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.CascadeType;
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
@@ -21,6 +22,7 @@ import jakarta.persistence.JoinColumn;
 @Table(name = "hotels")
 public class Hotel {
 	@Id
+	@Column(name = "hotel_id")
 	private int hotelId;
 	private String hotelName;
 	private String address;

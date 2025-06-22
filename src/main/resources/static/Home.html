@@ -3,13 +3,86 @@
     <head>
         <meta charset="UTF-8" />
         <title>Home Page of Hotel Chat-Bot</title>
+		<script>
+		  (function() {
+		    const TOKEN_KEY = "jwtToken";
+		    const TS_KEY    = "jwtTimestamp";
+		    const EXP_MS    = 6 * 60 * 60 * 1000;  // 6 hours
+
+		    // parse URL
+		    const url    = new URL(window.location.href);
+		    const urlTok = url.searchParams.get("token");
+
+		    // get existing
+		    let token = localStorage.getItem(TOKEN_KEY);
+		    let ts    = parseInt(localStorage.getItem(TS_KEY), 10) || 0;
+
+		    // 1) If they just arrived with ?token=, store it + timestamp
+		    if (urlTok) {
+		      token = urlTok;
+		      ts    = Date.now();
+		      localStorage.setItem(TOKEN_KEY, token);
+		      localStorage.setItem(TS_KEY, ts.toString());
+
+		      // remove token from URL
+		      url.searchParams.delete("token");
+		      window.history.replaceState({}, "", url.toString());
+		    }
+
+		    // helper to show denial and stop everything
+		    function deny() {
+		      document.body.innerHTML = `
+		        <div style="margin:2em;font-family:sans-serif;color:#a00">
+		          <h1>Access Denied</h1>
+		          <p>You must supply a valid JWT to view this application.</p>
+		          <p>Run in terminal:</p>
+		          <pre>curl http://localhost:8080/api/chat/token</pre>
+		          <p>Then open:</p>
+		          <pre>http://localhost:8080/Home.html?token=<em>PASTE_YOUR_TOKEN</em></pre>
+		        </div>`;
+		    }
+
+		    // 2) If no token at all → deny
+		    if (!token) {
+		      deny();
+		      return;
+		    }
+
+		    // 3) If timestamp missing or expired → clear + deny
+		    if (!ts || (Date.now() - ts) > EXP_MS) {
+		      localStorage.removeItem(TOKEN_KEY);
+		      localStorage.removeItem(TS_KEY);
+		      deny();
+		      return;
+		    }
+
+		    // 4) We have a valid, fresh token!  Wire it up to every AJAX/fetch
+		    window.jwt = token;
+		    window.authedFetch = function(url, opts = {}) {
+		      opts.headers = opts.headers || {};
+		      opts.headers["Authorization"] = "Bearer " + token;
+		      return fetch(url, opts);
+		    };
+
+		    if (window.jQuery && window.jwt) {
+		      $.ajaxSetup({
+		        beforeSend(xhr) {
+		          xhr.setRequestHeader("Authorization", "Bearer " + token);
+		        }
+		      });
+		    }
+
+		    // done — page can now load normally
+		  })();
+		  </script>
         <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
         <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css" />
         <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.min.js"></script>
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" />
-        <!--<link rel="stylesheet" type="text/css" href="home.css" /> -->
+        <link rel="stylesheet" type="text/css" href="home.css" />
     </head>
-    <body>
+	<body>
+
         <div class="container" style="margin-left: 100px;">
             <h1>Welcome to Booking Hotels Page</h1>
             <h2>Search your desired hotel Below:</h2>
@@ -731,26 +804,60 @@
 		      $("#chatHeader").on("click", function () {
 		        $("#chatBody, #chatInput").toggle();
 		      });
-		      $("#sendChat").on("click", function () {
-		        const msg = $("#chatMsg").val().trim();
-		        if (!msg) return;
-		        $("#chatBody").append(`<div><strong>You:</strong> ${msg}</div>`);
-		        $("#chatMsg").val("");
-		        $.ajax({
-		          url: "/api/chat",
-		          type: "POST",
-		          contentType: "application/json",
+			  let convState = null;  // holds the current dialog state
+
+			  $("#sendChat").on("click", function () {
+			    const msg = $("#chatMsg").val().trim();
+			    if (!msg) return;
+
+			    // append the user message
+			    $("#chatBody").append(`<div><strong>You:</strong> ${msg}</div>`);
+			    $("#chatMsg").val("");
+
+			    // send both the message *and* the current state
+				$.ajax({
+				  url: "/api/chat",
+				  type: "POST",
+				  contentType: "application/json",
 				  dataType: "json",
-		          data: JSON.stringify({ message: msg }),
-		          success: data => {
-		            $("#chatBody").append(`<div><strong>Bot:</strong> ${data.reply}</div>`);
-		            $("#chatBody").scrollTop($("#chatBody")[0].scrollHeight);
-		          },
-		          error: () => {
-		            $("#chatBody").append("<div><em>Sorry, something went wrong.</em></div>");
-		          }
-		        });
-		      });
+				  data: JSON.stringify({
+				    message: msg,
+				    state: convState
+				  }),
+				  success: data => {
+				    // 1) update our state
+				    convState = data.state;
+
+				    // 2) build the bot bubble
+				    const $chat = $("#chatBody");
+				    const $bot = $(
+				      `<div class="bot-msg">
+				         <strong>Bot:</strong> ${data.message}
+				       </div>`
+				    );
+				    $chat.append($bot);
+
+				    // 3) if there are suggestions, embed them inside the same bubble
+				    if (data.suggestions && data.suggestions.length) {
+				      const $suggWrap = $('<div class="suggestions-wrap"></div>');
+				      data.suggestions.forEach(text => {
+				        $suggWrap.append(
+				          `<span class="suggestion-item">${text}</span>`
+				        );
+				      });
+				      $bot.append($suggWrap);
+				    }
+
+				    // 4) scroll _after_ everything’s in place
+				    $chat.scrollTop( $chat.prop("scrollHeight") );
+				  },
+
+			      error: () => {
+			        $("#chatBody").append("<div><em>Sorry, something went wrong.</em></div>");
+			      }
+			    });
+			  });
+
 		      $("#chatMsg").on("keypress", function (e) {
 		        if (e.which === 13) {
 		          $("#sendChat").click();
@@ -761,6 +868,4 @@
         </script>
 
 		</body>
-
-    </body>
 </html>

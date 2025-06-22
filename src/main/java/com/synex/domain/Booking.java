@@ -33,6 +33,15 @@ public class Booking {
 	@Column(name = "customer_name", nullable = false)
 	private String customerName;
 
+	@Column(length = 500)
+	private String serviceList;
+	
+	@Column(name = "total_price", nullable = true)
+	private Double totalPrice;  // or BigDecimal for currency precision
+
+	@Column(nullable = true)
+	private boolean paymentDone;
+
 	public Integer getBookingId() {
 		return bookingId;
 	}
@@ -44,7 +53,13 @@ public class Booking {
 	public Integer getHotelId() {
 		return hotelId;
 	}
+	public Double getTotalPrice() {
+	    return totalPrice;
+	}
 
+	public void setTotalPrice(Double totalPrice) {
+	    this.totalPrice = totalPrice;
+	}
 	public void setHotelId(Integer hotelId) {
 		this.hotelId = hotelId;
 	}
@@ -95,5 +110,21 @@ public class Booking {
 
 	public void setCustomerName(String customerName) {
 		this.customerName = customerName;
+	}
+
+	public String getServiceList() {
+		return serviceList;
+	}
+
+	public void setServiceList(String serviceList) {
+		this.serviceList = serviceList;
+	}
+
+	public boolean isPaymentDone() {
+		return paymentDone;
+	}
+
+	public void setPaymentDone(boolean paymentDone) {
+		this.paymentDone = paymentDone;
 	}
 }

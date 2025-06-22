@@ -8,19 +8,29 @@ import org.springframework.context.annotation.Configuration;
 
 import java.time.Duration;
 
+//@Configuration
+//public class OpenAiConfig {
+//
+//    /**
+//     * Exposes com.theokanning.openai.service.OpenAiService for your EmbeddingService/ChatService.
+//     * Reads the API key from application.properties (openai.api-key).
+//     */
+//    @Bean
+//    public OpenAiService openAiService(
+//            @Value("${openai.api.key}") String apiKey,
+//            @Value("${openai.timeout-seconds:30}") long timeoutSeconds
+//    ) {
+//        // you can adjust the timeout as needed
+//        return new OpenAiService(apiKey, Duration.ofSeconds(timeoutSeconds));
+//    }
+//}
 @Configuration
 public class OpenAiConfig {
+	@Value("${openai.api.key}")
+	private String apiKey;
 
-    /**
-     * Exposes com.theokanning.openai.service.OpenAiService for your EmbeddingService/ChatService.
-     * Reads the API key from application.properties (openai.api-key).
-     */
-    @Bean
-    public OpenAiService openAiService(
-            @Value("${openai.api-key}") String apiKey,
-            @Value("${openai.timeout-seconds:30}") long timeoutSeconds
-    ) {
-        // you can adjust the timeout as needed
-        return new OpenAiService(apiKey, Duration.ofSeconds(timeoutSeconds));
-    }
+	@Bean
+	public OpenAiService openAiService() {
+		return new OpenAiService(apiKey);
+	}
 }

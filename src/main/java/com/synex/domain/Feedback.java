@@ -1,39 +1,64 @@
-// src/main/java/com/synex/domain/Feedback.java
 package com.synex.domain;
 
-import jakarta.persistence.*;
-import java.time.LocalDateTime;
+import java.util.List;
+
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
 
 @Entity
-@Table(name = "feedback")
 public class Feedback {
+
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;
 
-	@Column(columnDefinition = "text", nullable = false)
-	private String message;
+	/** 1–5 star rating provided by the user. */
+	private Long rating;
 
-	@Column(name = "created_at", nullable = false)
-	private LocalDateTime createdAt;
+	/** Free-form comments from the user. */
+	private String comments;
+
+	private List<Integer> bookingIds;
 
 	public Feedback() {
 	}
 
-	public Feedback(String message) {
-		this.message = message;
-		this.createdAt = LocalDateTime.now();
+	public Feedback(Long rating, String comments) {
+		this.rating = rating;
+		this.comments = comments;
 	}
 
 	public Long getId() {
 		return id;
 	}
 
-	public String getMessage() {
-		return message;
+	public Long getRating() {
+		return rating;
 	}
 
-	public LocalDateTime getCreatedAt() {
-		return createdAt;
+	public void setRating(Long rating2) {
+		this.rating = rating2;
+	}
+
+	public String getComments() {
+		return comments;
+	}
+
+	public void setComments(String comments) {
+		this.comments = comments;
+	}
+
+	public List<Integer> getBookingIds() {
+		return bookingIds;
+	}
+
+	public void setBookingIds(List<Integer> bookingIds) {
+		this.bookingIds = bookingIds;
+	}
+
+	public void setId(Long id) {
+		this.id = id;
 	}
 }

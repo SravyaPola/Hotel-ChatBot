@@ -1,21 +1,22 @@
-// src/main/java/com/synex/service/FeedbackService.java
 package com.synex.service;
 
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
 import com.synex.domain.Feedback;
 import com.synex.repository.FeedbackRepository;
-import org.springframework.stereotype.Service;
 
 @Service
 public class FeedbackService {
+	@Autowired
+	private FeedbackRepository repo;
 
-	private final FeedbackRepository feedbackRepo;
-
-	public FeedbackService(FeedbackRepository feedbackRepo) {
-		this.feedbackRepo = feedbackRepo;
+	public Feedback save(Feedback f) {
+		return repo.save(f);
 	}
 
-	/** Persist guest feedback */
-	public void saveFeedback(String message) {
-		feedbackRepo.save(new Feedback(message));
+	public void save(List<Integer> bookingIds, Integer feedbackRating, String feedbackComments) {
+
 	}
 }

@@ -4,38 +4,52 @@ import java.util.List;
 
 //outgoing JSON: { "reply": "...", "escalateToHuman": false, "suggestions": [] }
 public class ChatResponse {
-	private final String reply;
-	private final boolean escalateToHuman;
-	private final List<String> suggestions;
-	private DialogState nextState;
 
-	
+	private String message;
+	private boolean endOfConversation;
+	private List<String> suggestions;
+	private ConversationState state;
 
-	public ChatResponse(String reply, boolean escalateToHuman, List<String> suggestions, DialogState nextState) {
-		super();
-		this.reply = reply;
-		this.escalateToHuman = escalateToHuman;
+	public ChatResponse() {
+	}
+
+	public ChatResponse(String message, boolean endOfConversation, List<String> suggestions, ConversationState state) {
+		this.message = message;
+		this.endOfConversation = endOfConversation;
 		this.suggestions = suggestions;
-		this.nextState = nextState;
+		this.state = state;
 	}
 
-	public String getReply() {
-		return reply;
+	public String getMessage() {
+		return message;
 	}
 
-	public boolean isEscalateToHuman() {
-		return escalateToHuman;
+	public void setMessage(String message) {
+		this.message = message;
+	}
+
+	public boolean isEndOfConversation() {
+		return endOfConversation;
+	}
+
+	public void setEndOfConversation(boolean endOfConversation) {
+		this.endOfConversation = endOfConversation;
 	}
 
 	public List<String> getSuggestions() {
 		return suggestions;
 	}
 
-	public DialogState getNextState() {
-		return nextState;
+	public void setSuggestions(List<String> suggestions) {
+		this.suggestions = suggestions;
 	}
 
-	public void setNextState(DialogState nextState) {
-		this.nextState = nextState;
+	public ConversationState getState() {
+		return state;
 	}
+
+	public void setState(ConversationState state) {
+		this.state = state;
+	}
+
 }

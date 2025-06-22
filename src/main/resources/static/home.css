@@ -1,0 +1,43 @@
+/* ==========================================================================
+   Chat widget suggestion “chips” styling
+   Drop this at the very end of home.css, and remove any other .suggestions-wrap
+   or .suggestion-item rules you’ve tried above to avoid conflicts.
+   ========================================================================== */
+
+/* 1) Bot bubble container */
+#chatWidget #chatBody .bot-msg {
+  margin: 10px 0;
+  padding: 12px 16px;
+  background-color: #f1f8ff;
+  border: 1px solid #cce4ff;
+  border-radius: 8px;
+  line-height: 1.4;
+  word-wrap: break-word;
+}
+
+/* 2) Flex‐wrap wrapper for your spans */
+#chatWidget #chatBody .bot-msg .suggestions-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;        /* even gutters between pills */
+  margin-top: 10px;/* space above the row of pills */
+}
+
+/* 3) The actual “pill” */
+#chatWidget #chatBody .bot-msg .suggestion-item {
+  display: inline-block;
+  padding: 6px 14px;
+  border: 1px solid #007bff;
+  border-radius: 20px;
+  background-color: #ffffff;
+  color: #007bff;
+  font-size: 0.9em;
+  white-space: nowrap;  /* keep label on one line */
+  user-select: none;
+  cursor: default;
+}
+
+/* 4) Optional hover tint */
+#chatWidget #chatBody .bot-msg .suggestion-item:hover {
+  background-color: rgba(0, 123, 255, 0.1);
+}

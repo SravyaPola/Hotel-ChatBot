@@ -1,5 +1,7 @@
 package com.synex.domain;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
@@ -13,6 +15,13 @@ public class Amenity {
 	private Integer id;
 
 	private String name;
+
+	@JsonCreator
+	public static Amenity from(String value) {
+		Amenity a = new Amenity();
+		a.setName(value);
+		return a;
+	}
 
 	public Integer getId() {
 		return id;
@@ -29,4 +38,5 @@ public class Amenity {
 	public void setName(String name) {
 		this.name = name;
 	}
+
 }
