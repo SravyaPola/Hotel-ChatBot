@@ -27,4 +27,10 @@ public interface NLPService3 {
 	 * sentence human-friendly reply incorporating those values.
 	 */
 	String renderActionReply(ActionResult result, ConversationState ctx);
+
+	/**
+	 * Given an English list of strings and a target language name, return a
+	 * translated list.
+	 */
+	List<String> translateList(List<String> items, String targetLang);
 }

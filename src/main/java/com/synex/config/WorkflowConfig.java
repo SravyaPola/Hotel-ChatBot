@@ -62,6 +62,15 @@ public class WorkflowConfig {
 		m.put(ConversationState.Stage.ASK_FEEDBACK, new StateConfig(List.of("feedbackRating", "feedbackComments"), null,
 				ctx -> ConversationState.Stage.DONE, ctx -> Collections.emptyList()));
 
+		m.put(ConversationState.Stage.ASK_AGENT_INFO, new StateConfig(List.of("agentName", "agentPhone"),
+
+				null, ctx -> ConversationState.Stage.AGENT_INFO_RECEIVED, ctx -> List.of()));
+
+		m.put(ConversationState.Stage.AGENT_INFO_RECEIVED,
+				new StateConfig(List.of("confirmContinue"), null,
+						ctx -> ctx.getConfirmContinue() ? ctx.getPreviousStage() : ConversationState.Stage.DONE, // end
+						ctx -> List.of()));
+
 		return m;
 	}
 

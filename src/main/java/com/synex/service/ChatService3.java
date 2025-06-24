@@ -30,14 +30,93 @@ public class ChatService3 {
 	private HotelRoomService hotelRoomService;
 	@Autowired
 	private AmenityService amenityService;
+	@Autowired
+	private CustomerSupportService supportService;
 
 	public ChatResponse chat(ChatRequest req) {
 		ConversationState st = Optional.ofNullable(req.getState()).orElse(new ConversationState());
+		if (req.getLanguage() != null && !req.getLanguage().isBlank()) {
+			st.setLanguage(req.getLanguage());
+		}
 		if (st.getBookingIds() == null) {
 			st.setBookingIds(new ArrayList<>());
 		}
 		String userMsg = req.getMessage();
 		ConversationState.Stage stage = st.getStage();
+
+		String lower = userMsg.toLowerCase();
+		if (st.getStage() != ConversationState.Stage.ASK_AGENT_INFO
+				&& (lower.contains("agent") || lower.contains("representative") || lower.contains("human"))) {
+
+			// save where we were
+			st.setPreviousStage(st.getStage());
+
+			// jump into agent‐info flow
+			st.setStage(ConversationState.Stage.ASK_AGENT_INFO);
+			String prompt = nlp.renderActionReply(new ActionResult("askAgentInfo", Map.of()), st);
+
+			return new ChatResponse(prompt, /* done= */ false,
+					getSuggestionsForStage(ConversationState.Stage.ASK_AGENT_INFO, st), st);
+		}
+
+		// — collecting name & phone —
+		// — collecting the user’s name & phone for agent support —
+		if (st.getStage() == ConversationState.Stage.ASK_AGENT_INFO) {
+			// 1) Extract "agentName" & "agentPhone" via the LLM
+			Map<String, String> slots = nlp.fillSlots(List.of("agentName", "agentPhone"), userMsg);
+			String name = slots.get("agentName");
+			String phone = slots.get("agentPhone");
+
+			// 2) Persist into your support queue
+			supportService.save(new AgentRequest(name, phone));
+
+			// 3) Advance to the “received” sub‐stage
+			st.setStage(ConversationState.Stage.AGENT_INFO_RECEIVED);
+
+			// 4) Render the acknowledgment via an ActionResult
+			String reply = nlp.renderActionReply(new ActionResult("agentInfoReceived", Map.of()), st);
+
+			// 5) Offer the “continue or end” buttons
+			List<String> buttons = getSuggestionsForStage(ConversationState.Stage.AGENT_INFO_RECEIVED, st);
+
+			return new ChatResponse(reply, /* done= */ false, buttons, st);
+		}
+
+		// — after user says “No, end chat” —
+		// — after user provides “Yes, continue my booking” or “No, end chat” —
+		// — after acknowledging agent-info, ask whether to continue —
+		if (st.getStage() == ConversationState.Stage.AGENT_INFO_RECEIVED) {
+			// 1) bump into an “askContinueBooking” sub-stage
+			st.setStage(ConversationState.Stage.ASK_CONTINUE_BOOKING);
+
+			// 2) fire off the LLM prompt via your ActionResult
+			String prompt = nlp.renderActionReply(new ActionResult("askContinueBooking", Map.of()), st);
+
+			// 3) supply Yes/No buttons (they’ll be translated automatically)
+			List<String> buttons = getSuggestionsForStage(ConversationState.Stage.ASK_CONTINUE_BOOKING, st);
+
+			return new ChatResponse(prompt, /* done= */ false, buttons, st);
+		}
+
+		// — now handle the user's yes/no reply —
+		if (st.getStage() == ConversationState.Stage.ASK_CONTINUE_BOOKING) {
+			Map<String, String> slots = nlp.fillSlots(List.of("confirmContinue"), userMsg);
+			boolean cont = Boolean.parseBoolean(slots.get("confirmContinue"));
+			st.setConfirmContinue(cont);
+
+			if (cont) {
+				// resume at wherever they were before the agent-interrupt
+				ConversationState.Stage resume = st.getPreviousStage();
+				st.setStage(resume);
+				String question = nlp.generateQuestion(workflow.get(resume).slotsNeeded(), st);
+				List<String> buttons = getSuggestionsForStage(resume, st);
+				return new ChatResponse(question, false, buttons, st);
+			} else {
+				// cleanly end the chat via an action
+				String reply = nlp.renderActionReply(new ActionResult("endAgentChat", Map.of()), st);
+				return new ChatResponse(reply, /* done= */ true, List.of(), st);
+			}
+		}
 
 		// ========== 1. ASK_LOCATION ===============
 		if (stage == ConversationState.Stage.ASK_LOCATION) {
@@ -54,14 +133,14 @@ public class ChatService3 {
 			boolean hasCity = st.getCity() != null && !st.getCity().isBlank();
 			boolean hasState = st.getState() != null && !st.getState().isBlank();
 
-			List<String> suggestions = Stream.of(hotelService.getAllCities(), hotelService.getAllStates())
-					.flatMap(Collection::stream).collect(Collectors.toUnmodifiableList());
-
 			// neither → ask both
 			if (!hasCity && !hasState) {
-				return new ChatResponse(nlp.generateQuestion(List.of("city", "state"), st), false, suggestions, st);
+				// build the follow-up question
+				String follow = nlp.generateQuestion(List.of("city", "state"), st);
+				// translate the city/state suggestions into the user’s language
+				List<String> buttons = getSuggestionsForStage(ConversationState.Stage.ASK_LOCATION, st);
+				return new ChatResponse(follow, false, buttons, st);
 			}
-
 			// search by whichever you have
 			List<Hotel> found = hasCity && hasState ? hotelService.findByCityAndState(st.getCity(), st.getState())
 					: hasCity ? hotelService.findByCity(st.getCity()) : hotelService.findByState(st.getState());
@@ -79,7 +158,9 @@ public class ChatService3 {
 
 				// Always re-ask for BOTH city and state
 				String follow = nlp.generateQuestion(List.of("city", "state"), st);
-				return new ChatResponse(reply + "\n\n" + follow, false, suggestions, st);
+				List<String> buttons = getSuggestionsForStage(ConversationState.Stage.ASK_LOCATION, st);
+				return new ChatResponse(reply + "\n\n" + follow, false, buttons, // now goes through translateList(...)
+						st);
 			}
 
 			// hotels found → list & advance to ASK_DATES
@@ -462,6 +543,7 @@ public class ChatService3 {
 			data.put("subtotal", subtotal);
 			if (customerName != null)
 				data.put("customerName", customerName);
+			hotelRoomService.findById(st.getHotelRoomId()).ifPresent(room -> data.put("policies", room.getPolicies()));
 
 			ActionResult summary = new ActionResult("showSubtotal", data);
 			String reply = nlp.renderActionReply(summary, st); // LLM will construct the actual prompt
@@ -496,13 +578,13 @@ public class ChatService3 {
 				Booking booking = bookingService.create(st.getHotelId(), st.getHotelRoomId(), noRooms, guests,
 						st.getCheckIn(), st.getCheckOut(), st.getCustomerName(), String.join(",", services), subtotal);
 				st.getBookingIds().add(booking.getBookingId());
-
+				String policies = hotelRoomService.findById(st.getHotelRoomId()).map(HotelRoom::getPolicies).orElse("");
 				// Send all booking info through ActionResult
 				ActionResult confirmed = new ActionResult("bookingConfirmed",
 						Map.of("bookingId", booking.getBookingId(), "subtotal", subtotal, "hotelName",
-								st.getHotelName(), "customerName", st.getCustomerName(), "room", st.getHotelRoomId(),
-								"checkIn", st.getCheckIn(), "checkOut", st.getCheckOut(), "guests", guests, "rooms",
-								noRooms, "services", services));
+								st.getHotelName(), "customerName", st.getCustomerName(), "roomType", st.getRoomType(),
+								"checkIn", st.getCheckIn(), "guests", guests, "rooms", noRooms, "services", services,
+								"policies", policies));
 				String reply = nlp.renderActionReply(confirmed, st);
 
 				st.setStage(cfg.nextState().apply(st)); // To ASK_ANOTHER
@@ -697,40 +779,35 @@ public class ChatService3 {
 	}
 
 	private List<String> getSuggestionsForStage(ConversationState.Stage stage, ConversationState st) {
-		return switch (stage) {
+// 1) Build the raw English suggestions
+		List<String> suggestions = switch (stage) {
 		case ASK_LOCATION -> Stream.of(hotelService.getAllCities(), hotelService.getAllStates())
 				.flatMap(Collection::stream).collect(Collectors.toUnmodifiableList());
 
 		case ASK_DATES -> {
-			// pick a “base” check-in: either what they already set, or tomorrow
 			LocalDate baseIn = st.getCheckIn() != null ? st.getCheckIn() : LocalDate.now().plusDays(1);
-			// build two or three examples of (checkIn → checkOut)
-			String option1 = baseIn.toString() + " → " + baseIn.plusDays(1);
-			String option2 = baseIn.plusDays(2).toString() + " → " + baseIn.plusDays(3);
-			String option3 = "Next Monday → Next Wednesday";
-			yield List.of(option1, option2, option3);
+			yield List.of(baseIn + " → " + baseIn.plusDays(1), baseIn.plusDays(2) + " → " + baseIn.plusDays(3),
+					"Next Monday → Next Wednesday");
 		}
 
 		case ASK_GUESTS -> List.of("1", "2", "3", "4", "5");
 
 		case ASK_FILTERS -> {
-			List<String> suggestions = new ArrayList<>();
-			// star‐rating range
-			suggestions.add("1–5 stars");
-			// price range
-			suggestions.add("0–500$");
-			// all amenities
-			suggestions.addAll(amenityService.getAllAmenities());
-			yield suggestions;
+			List<String> list = new ArrayList<>();
+			list.add("1–5 stars");
+			list.add("0–500$");
+			list.addAll(amenityService.getAllAmenities());
+			yield list;
 		}
 
-		case SHOW_HOTELS ->
-			Optional.ofNullable(st.getLastHotels()).orElse(List.of()).stream().map(Hotel::getHotelName).toList();
+		case SHOW_HOTELS -> Optional.ofNullable(st.getLastHotels()).orElse(List.of()).stream().map(Hotel::getHotelName)
+				.collect(Collectors.toList());
 
 		case ASK_SERVICES -> Optional.ofNullable(st.getLastServiceOptions()).orElse(List.of()).stream()
-				.map(opt -> opt.getName() + " – $" + String.format("%.2f", opt.getPrice())).toList();
+				.map(opt -> opt.getName() + " – $" + String.format("%.2f", opt.getPrice()))
+				.collect(Collectors.toList());
 
-		case ASK_ROOM_TYPE -> st.getLastRoomTypes().stream().map(RoomType::getName).toList();
+		case ASK_ROOM_TYPE -> st.getLastRoomTypes().stream().map(RoomType::getName).collect(Collectors.toList());
 
 		case ASK_NUM_ROOMS -> List.of("1", "2", "3", "4");
 
@@ -740,8 +817,18 @@ public class ChatService3 {
 
 		case ASK_FEEDBACK -> List.of("1", "2", "3", "4", "5");
 
+		case ASK_AGENT_INFO -> List.of("Provide your full name", "Provide your phone number");
+
+		case AGENT_INFO_RECEIVED -> List.of("Yes, continue my booking", "No, end chat");
+
 		default -> List.of();
 		};
+
+// 2) Determine target language (default = English)
+		String lang = Optional.ofNullable(st.getLanguage()).filter(s -> !s.isBlank()).orElse("English");
+
+// now *always* call through the interface proxy
+		return nlp.translateList(suggestions, lang);
 	}
 
 }

@@ -27,4 +27,8 @@ public class HotelRoomService {
 	public Optional<HotelRoom> findHotelRoomByHotelAndType(Integer hotelId, Integer roomTypeId) {
 		return hotelRoomRepository.findByHotel_HotelIdAndType_TypeId(hotelId, roomTypeId);
 	}
+
+	public Optional<HotelRoom> findById(Integer hotelRoomId) {
+		return hotelRoomRepository.findById(hotelRoomId);
+	}
 }

@@ -1,43 +1,448 @@
 /* ==========================================================================
-   Chat widget suggestion “chips” styling
-   Drop this at the very end of home.css, and remove any other .suggestions-wrap
-   or .suggestion-item rules you’ve tried above to avoid conflicts.
+   home.css — “Cosmic Sunset” Theme
    ========================================================================== */
 
-/* 1) Bot bubble container */
-#chatWidget #chatBody .bot-msg {
-  margin: 10px 0;
-  padding: 12px 16px;
-  background-color: #f1f8ff;
-  border: 1px solid #cce4ff;
-  border-radius: 8px;
-  line-height: 1.4;
-  word-wrap: break-word;
+/* 1. VARIABLES */
+:root {
+	/* Page & panels */
+	--bg-page: #f5f7fa;
+	/* very light gray */
+	--bg-panel: #ffffff;
+	/* pure white */
+	--bg-modals: #eef2f5;
+	/* off-white */
+
+	/* Accents */
+	--bg-accent: linear-gradient(135deg, #84fab0 0%, #8fd3f4 100%);
+	--color-highlight: #2a9df4;
+	/* bright sky blue */
+	--color-secondary: #ff8c94;
+	/* soft coral */
+
+	/* Text & borders */
+	--color-text: #333333;
+	/* dark charcoal */
+	--color-border: rgba(0, 0, 0, 0.1);
+
+	/* Inputs */
+	--color-input-bg: #ffffff;
+	--color-input-border: rgba(0, 0, 0, 0.2);
+
+	/* Shadows */
+	--shadow-panel: 0 8px 16px rgba(0, 0, 0, 0.08);
+	--shadow-card: 0 4px 12px rgba(0, 0, 0, 0.1);
+
+	/* Typography & sizing (keep these) */
+	--font-sans: 'Segoe UI', Roboto, sans-serif;
+	--radius: 8px;
+	--transition: 0.3s ease;
 }
 
-/* 2) Flex‐wrap wrapper for your spans */
-#chatWidget #chatBody .bot-msg .suggestions-wrap {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;        /* even gutters between pills */
-  margin-top: 10px;/* space above the row of pills */
+
+/* 2. RESET & BASE */
+*,
+*::before,
+*::after {
+	box-sizing: border-box;
 }
 
-/* 3) The actual “pill” */
-#chatWidget #chatBody .bot-msg .suggestion-item {
-  display: inline-block;
-  padding: 6px 14px;
-  border: 1px solid #007bff;
-  border-radius: 20px;
-  background-color: #ffffff;
-  color: #007bff;
-  font-size: 0.9em;
-  white-space: nowrap;  /* keep label on one line */
-  user-select: none;
-  cursor: default;
+body {
+	margin: 0;
+	padding: 0;
+	font-family: var(--font-sans);
+	background: var(--bg-page);
+	color: var(--color-text);
+	line-height: 1.6;
 }
 
-/* 4) Optional hover tint */
-#chatWidget #chatBody .bot-msg .suggestion-item:hover {
-  background-color: rgba(0, 123, 255, 0.1);
+.container {
+	max-width: 1200px;
+	margin: auto;
+	padding: 1rem;
+}
+
+h1 {
+	font-size: 2.5rem;
+	margin: .5rem 0;
+}
+
+h2 {
+	font-size: 1.8rem;
+	margin: .5rem 0;
+}
+
+h5 {
+	font-size: 1.1rem;
+	margin: .5rem 0;
+}
+
+/* 3. SEARCH PANEL */
+.search-panel {
+	background: var(--bg-panel);
+	border-radius: var(--radius);
+	box-shadow: var(--shadow-panel);
+	padding: 2rem;
+	margin: 2rem 0;
+}
+
+.search-panel label {
+	display: block;
+	margin-bottom: .25rem;
+	font-size: .9rem;
+}
+
+.search-panel input,
+.search-panel select {
+	width: 100%;
+	background: var(--color-input-bg);
+	border: 1px solid var(--color-input-border);
+	color: var(--color-text);
+	border-radius: var(--radius);
+	padding: .75rem 1rem;
+	transition: border-color var(--transition);
+}
+
+.search-panel input:focus,
+.search-panel select:focus {
+	border-color: var(--color-highlight);
+	outline: none;
+}
+
+.btn-search {
+	background: var(--bg-accent);
+	background-size: 200%;
+	border: none;
+	color: #fff;
+	padding: .9rem 2rem;
+	font-size: 1rem;
+	font-weight: 600;
+	border-radius: var(--radius);
+	cursor: pointer;
+	transition: background-position var(--transition);
+}
+
+.btn-search:hover {
+	background-position: 100% 0;
+}
+
+/* 4. LAYOUT */
+.row {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 2rem;
+}
+
+.sidebar {
+	flex: 1 1 220px;
+	background: var(--bg-panel);
+	padding: 1.5rem;
+	border-radius: var(--radius);
+	box-shadow: var(--shadow-panel);
+}
+
+.results {
+	flex: 3 1 600px;
+}
+
+/* 5. FILTERS */
+.form-check {
+	margin-bottom: .75rem;
+}
+
+.form-check-input {
+	accent-color: var(--color-secondary);
+	transform: scale(1.2);
+	margin-right: .5rem;
+}
+
+.slider-container {
+	margin: 1rem 0;
+}
+
+.slider-container input[type=range] {
+	width: 100%;
+	accent-color: var(--color-highlight);
+}
+
+.slider-container p {
+	margin: .5rem 0 0;
+	font-size: .9rem;
+}
+
+/* 6. HOTEL CARDS */
+.hotel-card {
+	background: var(--bg-panel);
+	border-radius: var(--radius);
+	box-shadow: var(--shadow-card);
+	overflow: hidden;
+	margin-bottom: 2rem;
+	transition: transform var(--transition), box-shadow var(--transition);
+}
+
+.hotel-card:hover {
+	transform: translateY(-4px);
+	box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+}
+
+.hotel-card .card-body {
+	padding: 1.5rem;
+}
+
+.hotel-card h5 {
+	font-size: 1.25rem;
+	margin-bottom: .5rem;
+}
+
+.hotel-card p {
+	margin: .25rem 0;
+}
+
+.hotel-card .btn {
+	border-radius: var(--radius);
+	transition: background var(--transition), transform var(--transition);
+}
+
+.hotel-card .btn-secondary {
+	background: var(--color-input-bg);
+	color: var(--color-text);
+	border: 1px solid var(--color-border);
+}
+
+.hotel-card .btn-secondary:hover {
+	background: var(--color-secondary);
+	color: #fff;
+	transform: translateY(-2px);
+}
+
+.hotel-card .btn-primary {
+	background: var(--color-highlight);
+	border: none;
+}
+
+.hotel-card .btn-primary:hover {
+	background: #16cbd9;
+	transform: translateY(-2px);
+}
+
+/* 7. MODALS */
+.modal-content {
+	background: var(--bg-modals);
+	color: var(--color-text);
+	border-radius: var(--radius);
+	border: none;
+}
+
+.modal-header,
+.modal-footer {
+	border: none;
+}
+
+.modal-header .close {
+	font-size: 1.4rem;
+	color: var(--color-secondary);
+	opacity: 1;
+}
+
+.modal-header .close:hover {
+	color: #fff;
+}
+
+.modal-body input,
+.modal-body select {
+	background: var(--color-input-bg);
+	border: 1px solid var(--color-input-border);
+	border-radius: var(--radius);
+	padding: .6rem 1rem;
+	color: var(--color-text);
+}
+
+.modal-body label {
+	font-size: .9rem;
+}
+
+.modal-footer .btn {
+	border-radius: var(--radius);
+	padding: .6rem 1.5rem;
+}
+
+.modal-footer .btn-primary {
+	background: var(--bg-accent);
+	border: none;
+}
+
+.modal-footer .btn-danger {
+	background: var(--color-secondary);
+	border: none;
+}
+
+/* 8. CHAT WIDGET */
+#chatWidget {
+	position: fixed;
+	bottom: 20px;
+	right: 20px;
+	width: 54px;
+	height: 54px;
+	z-index: 2000;
+	transition: all var(--transition);
+	border-radius: 50%;
+	background: var(--bg-accent);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	box-shadow: var(--shadow-card);
+}
+
+#chatWidget.open {
+	width: 600px;
+	height: 600px;
+	bottom: 50%;
+	right: 50%;
+	transform: translate(50%, 50%);
+	border-radius: var(--radius);
+	background: var(--bg-panel);
+}
+
+#chatHeader i,
+#chatClose i,
+#sendChat i {
+	color: #fff;
+	font-size: 1.2rem;
+	cursor: pointer;
+}
+
+#chatClose {
+	display: none;
+}
+
+#chatWidget.open #chatClose {
+	display: flex;
+	position: absolute;
+	top: 12px;
+	right: 12px;
+	width: 32px;
+	height: 32px;
+	background: var(--color-secondary);
+	border-radius: 50%;
+	align-items: center;
+	justify-content: center;
+}
+
+#chatWidget.open #chatBody {
+	display: block;
+	position: absolute;
+	top: 56px;
+	left: 0;
+	width: 100%;
+	height: calc(100% - 130px);
+	padding: 1rem;
+	overflow-y: auto;
+	background: var(--bg-modals);
+	border-top-left-radius: var(--radius);
+	border-top-right-radius: var(--radius);
+}
+
+.bot-msg,
+.you-msg {
+	max-width: 80%;
+	margin-bottom: .75rem;
+	padding: .75rem 1rem;
+	border-radius: var(--radius);
+	position: relative;
+	font-size: .95rem;
+}
+
+.bot-msg {
+	background: var(--color-secondary);
+	color: #fff;
+	align-self: flex-start;
+	border-bottom-left-radius: 0;
+}
+
+.you-msg {
+	background: var(--color-input-bg);
+	color: var(--color-text);
+	align-self: flex-end;
+	border-bottom-right-radius: 0;
+	border: 1px solid var(--color-highlight);
+}
+
+.suggestions-wrap {
+	display: flex;
+	flex-wrap: wrap;
+	gap: .5rem;
+	margin-top: .5rem;
+}
+
+.suggestion-item {
+	background: var(--color-highlight);
+	color: #000;
+	padding: .5rem 1rem;
+	border-radius: var(--radius);
+	cursor: pointer;
+	transition: transform var(--transition);
+}
+
+.suggestion-item:hover {
+	transform: translateY(-2px);
+}
+
+/* 9. RESPONSIVE */
+@media (max-width: 992px) {
+	.row {
+		flex-direction: column;
+	}
+}
+
+@media (max-width: 576px) {
+	.search-panel {
+		padding: 1rem;
+	}
+
+	#chatWidget.open {
+		width: 90%;
+		height: 80%;
+	}
+}
+
+/* ─────────────────────────────────────────
+   Chat Input Alignment & Overflow Fix
+───────────────────────────────────────── */
+
+/* 1) Let the chat container show overflow 
+      so nothing gets clipped when we lift 
+      the plane icon a bit. */
+#chatWidget {
+	overflow: visible;
+}
+
+/* 2) Center the input/button vertically
+      instead of hard‐coding a height. */
+#chatWidget.open #chatInput {
+	position: absolute;
+	bottom: 0;
+	left: 0;
+	right: 0;
+	/* ditch the fixed height */
+	height: auto;
+	min-height: 70px;
+	display: flex !important;
+	align-items: center;
+	padding: 0.75rem 1rem;
+	box-sizing: border-box;
+	z-index: 2;
+	/* ensure it sits above the bubble backdrop */
+}
+
+/* 3) Give the send button a little lift
+      (optional) so it sits flush with the input. */
+#chatWidget.open #sendChat {
+	margin: 0;
+	/* if you had any bottom-negative, remove it */
+	position: relative;
+	z-index: 3;
+}
+
+/* 4) Make sure the close‐icon circle is on top */
+#chatWidget.open #chatClose {
+	z-index: 4;
 }

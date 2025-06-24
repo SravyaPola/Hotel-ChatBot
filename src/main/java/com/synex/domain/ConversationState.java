@@ -9,7 +9,7 @@ public class ConversationState {
 		START, ASK_LOCATION, ASK_CITY, SHOW_ALL_HOTELS, ASK_FILTERS, SHOW_FILTERED_HOTELS, SHOW_HOTEL_DETAILS,
 		ASK_SERVICES, ASK_CONFIRM_BOOK, REVIEW, ASK_PAYMENT, ASK_FEEDBACK, DONE, ASK_DATES, ASK_GUESTS, SHOW_HOTELS,
 		SHOW_AMENITIES, SHOW_SUBTOTAL, ASK_ANOTHER, LIST_HOTELS, ASK_ROOM_TYPE, ASK_NAME, ASK_FILTER_REFINE,
-		ASK_NUM_ROOMS, ASK_CUSTOMER_NAME, FILTER_HOTELS
+		ASK_NUM_ROOMS, ASK_CUSTOMER_NAME, FILTER_HOTELS, ASK_AGENT_INFO, AGENT_INFO_RECEIVED, ASK_CONTINUE_BOOKING
 	}
 
 	private Stage stage = Stage.START;
@@ -18,15 +18,6 @@ public class ConversationState {
 	private String hotelName;
 	private Integer hotelId;
 	private double Subtotal;
-
-	public Integer getHotelId() {
-		return hotelId;
-	}
-
-	public void setHotelId(Integer hotelId) {
-		this.hotelId = hotelId;
-	}
-
 	private String city;
 	private String state;
 	private LocalDate checkIn;
@@ -35,20 +26,13 @@ public class ConversationState {
 	private Integer minStars;
 	private Double minPrice;
 	private Double maxPrice;
+	private String language;
 	private Set<String> requiredAmenities = new HashSet<>();
 	private String roomType; // holds the name the user types
 	private Integer noRooms; // how many rooms they want
 	// the name to put on the booking
 	// + getters/setters…
 	private double RoomPrice;
-
-	public Integer getNoRooms() {
-		return noRooms;
-	}
-
-	public void setNoRooms(Integer noRooms) {
-		this.noRooms = noRooms;
-	}
 
 	private List<Hotel> lastHotels = new ArrayList<>();
 	@JsonIgnore
@@ -86,16 +70,21 @@ public class ConversationState {
 
 	private Integer hotelRoomId;
 	private Boolean confirmRefine;
-
-	public HotelRoom getChosenRoom() {
-		return chosenRoom;
-	}
-
-	public void setChosenRoom(HotelRoom chosenRoom) {
-		this.chosenRoom = chosenRoom;
-	}
+	private String agentRequestName;
+	private String agentRequestPhone;
+	private Stage previousStage;
 
 	private String customerName;
+	private Boolean confirmContinue; // <— new
+	// … getters & setters …
+
+	public Boolean getConfirmContinue() {
+		return confirmContinue;
+	}
+
+	public void setConfirmContinue(Boolean c) {
+		this.confirmContinue = c;
+	}
 
 	public ConversationState() {
 	}
@@ -107,6 +96,14 @@ public class ConversationState {
 
 	public List<ServiceOption> getLastServiceOptions() {
 		return lastServiceOptions;
+	}
+
+	public Integer getNoRooms() {
+		return noRooms;
+	}
+
+	public void setNoRooms(Integer noRooms) {
+		this.noRooms = noRooms;
 	}
 
 	public void setLastServiceOptions(List<ServiceOption> lastServiceOptions) {
@@ -135,6 +132,14 @@ public class ConversationState {
 
 	public void setLastRoomTypes(List<RoomType> lastRoomTypes) {
 		this.lastRoomTypes = lastRoomTypes;
+	}
+
+	public Integer getHotelId() {
+		return hotelId;
+	}
+
+	public void setHotelId(Integer hotelId) {
+		this.hotelId = hotelId;
 	}
 
 	public String getRoomType() {
@@ -290,6 +295,14 @@ public class ConversationState {
 		this.chosenHotel = chosenHotel;
 	}
 
+	public HotelRoom getChosenRoom() {
+		return chosenRoom;
+	}
+
+	public void setChosenRoom(HotelRoom chosenRoom) {
+		this.chosenRoom = chosenRoom;
+	}
+
 	public Boolean getConfirmBook() {
 		return confirmBook;
 	}
@@ -411,6 +424,38 @@ public class ConversationState {
 		this.paymentDone = null;
 		this.feedbackRating = null;
 		this.feedbackComments = null;
+	}
+
+	public String getLanguage() {
+		return language;
+	}
+
+	public void setLanguage(String language) {
+		this.language = language;
+	}
+
+	public Stage getPreviousStage() {
+		return previousStage;
+	}
+
+	public void setPreviousStage(Stage previousStage) {
+		this.previousStage = previousStage;
+	}
+
+	public String getAgentRequestName() {
+		return agentRequestName;
+	}
+
+	public void setAgentRequestName(String agentRequestName) {
+		this.agentRequestName = agentRequestName;
+	}
+
+	public String getAgentRequestPhone() {
+		return agentRequestPhone;
+	}
+
+	public void setAgentRequestPhone(String agentRequestPhone) {
+		this.agentRequestPhone = agentRequestPhone;
 	}
 
 }

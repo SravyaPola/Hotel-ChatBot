@@ -1,5 +1,6 @@
 package com.synex.config;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.synex.domain.ActionResult;
@@ -15,6 +16,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -23,8 +25,46 @@ public class OpenAiService3 implements NLPService3 {
 	private final OpenAiService client;
 	private final ObjectMapper mapper = new ObjectMapper();
 
+	private static final String MULTI_LANG_SYSTEM_PROMPT = """
+			You are a multilingual hotel-booking assistant.
+			For *each* incoming user message, ignore all previous turns,
+			detect the language of *only* that message,
+			and reply in exactly that language.
+			If the user’s message is in English, *you must reply in English*.
+			If it’s in French, reply in French, etc.
+			If it’s in Spanish, reply in Spanish, etc.
+			Do not reveal any internal translation steps.
+			""";
+
 	public OpenAiService3(@Value("${openai.api.key}") String apiKey) {
 		this.client = new OpenAiService(apiKey);
+	}
+
+	// Auto‐detect version, for JSON extraction where language doesn’t matter:
+	private List<ChatMessage> withSystemPrompt(String userContent) {
+		return List.of(new ChatMessage("system", MULTI_LANG_SYSTEM_PROMPT), new ChatMessage("user", userContent));
+	}
+
+	// Language‐aware version, for follow-ups & replies:
+	private List<ChatMessage> withSystemPrompt(String userContent, ConversationState st) {
+		String lang = Optional.ofNullable(st.getLanguage()).filter(s -> !s.isBlank()).orElse(null);
+
+		String system;
+		if (lang != null) {
+			// map ISO code -> display name
+			String display = switch (lang.toLowerCase()) {
+			case "es", "español" -> "Spanish";
+			case "fr", "français" -> "French";
+			case "de", "deutsch" -> "German";
+			default -> "English";
+			};
+			system = "You are a hotel-booking assistant. Always reply in " + display
+					+ ". Do not reveal internal translation steps.";
+		} else {
+			system = MULTI_LANG_SYSTEM_PROMPT; // your old auto-detect prompt
+		}
+
+		return List.of(new ChatMessage("system", system), new ChatMessage("user", userContent));
 	}
 
 	/** Extract exactly the named slots by asking GPT to return only JSON. */
@@ -71,14 +111,22 @@ public class OpenAiService3 implements NLPService3 {
 					- Always ensure that check-out is after check-in. Prompt user again if invalid.
 					- For **any** slot whose name suggests a confirmation (e.g. `confirmBooking`, `confirmPayment`, `confirmAnother`),
 					interpret common variants (“yes”, “no”, “sure”, “ok”, “paid”, “not”, etc.) **and output** a JSON **boolean** (`true` or `false`).
-
+					- Translate the following text into the user’s requested language.
+					If the text isn’t English, first translate it to English yourself, then translate that English into the target language.
+					Output only the final translation.
+					- You are a multilingual hotel-booking assistant.  Whenever a user speaks to you, detect the language they’re using and reply **in that same language**.
+					 You may do any internal work (for example, translate into English to compute the answer), but **only** output your final message in the user’s language.
+					 Don’t ever output internal translation steps.
+					- If the user provides only a state name, fill **only** the `state` slot; set `city` to null.
 
 							    """
 					.formatted(String.join(", ", slots), userMessage.replace("\"", "\\\""));
 
 			// 3) Call the LLM
+//			ChatCompletionRequest req = ChatCompletionRequest.builder().model("gpt-4o-mini")
+//					.messages(List.of(new ChatMessage("user", prompt))).build();
 			ChatCompletionRequest req = ChatCompletionRequest.builder().model("gpt-4o-mini")
-					.messages(List.of(new ChatMessage("user", prompt))).build();
+					.messages(withSystemPrompt(prompt)).build();
 
 			ChatCompletionResult res = client.createChatCompletion(req);
 			String json = res.getChoices().get(0).getMessage().getContent().trim();
@@ -127,10 +175,26 @@ public class OpenAiService3 implements NLPService3 {
 				Ask exactly one concise question to elicit: %s
 				Do NOT ask for city or state if the user has already provided city or state.
 				Only ask for the missing slots listed.
-				""".formatted(context, missingSlots);
 
+				You are a **multilingual hotel-booking assistant**.  **Always** obey these formatting rules for **every** outgoing message:
+
+					Follow this rules mandatory
+					Markdown only—no HTML or plain text.
+					Hotel lists service pricing must be a numbered list
+					Booking should look like summary, not the paragraph
+					Always end with a clear question or call-to-action in the user’s language.
+					Never add, remove or reorder any data (stars, prices, dates, arrows, punctuation, list order).
+					Vary your phrasing when asking the same thing in million ways
+				"""
+				.formatted(context, missingSlots);
+
+//		ChatCompletionRequest req = ChatCompletionRequest.builder().model("gpt-4o-mini")
+//				.messages(List.of(new ChatMessage("system", prompt))).build();
+
+//		
 		ChatCompletionRequest req = ChatCompletionRequest.builder().model("gpt-4o-mini")
-				.messages(List.of(new ChatMessage("system", prompt))).build();
+				.messages(withSystemPrompt(prompt, ctx)) // <-- two-arg
+				.build();
 
 		ChatCompletionResult res = client.createChatCompletion(req);
 		return res.getChoices().get(0).getMessage().getContent().trim();
@@ -262,10 +326,11 @@ public class OpenAiService3 implements NLPService3 {
 					List all available room types from data.availableRooms.
 					Ask the user to pick a room type by name or number.
 					Only use data provided, do not add extra information.
-
+					Try to match from the list with the details provide by the user even if they provide some spell mistake or case or fuzzy .Pick only one.
 					DATA:
 					%s
-					""".formatted(data);
+					"""
+					.formatted(data);
 			break;
 		case "roomTypeNotMatched":
 			List<String> availableRooms = safeList(data, "availableRooms");
@@ -280,7 +345,7 @@ public class OpenAiService3 implements NLPService3 {
 
 		case "askNumRooms":
 			prompt = """
-					Please specify how many rooms you would like to book.
+					Ask user for booking number of rooms
 					""";
 			break;
 
@@ -380,19 +445,71 @@ public class OpenAiService3 implements NLPService3 {
 					""".formatted(data);
 			break;
 
+		case "askAgentInfo":
+			prompt = """
+					INSTRUCTION:
+					When type is "askAgentInfo":
+					You are a friendly assistant connecting the user to a live support agent.
+					Ask the user for their full name and phone number so we can reach them.
+					Output only that one concise question.
+					""";
+			break;
+
+		case "agentInfoReceived":
+			prompt = """
+					INSTRUCTION:
+					When type is "agentInfoReceived":
+					Acknowledge that you’ve received their info.
+					Politely say an agent will reach out shortly.
+					Then invite them: “How else can I help you today?” (or similar).
+					Output only that one message.
+					""";
+			break;
+
+		case "askContinueBooking":
+			prompt = """
+					INSTRUCTION:
+					When type is "askContinueBooking":
+					Ask the user if they’d like to continue with their hotel booking or end the chat.
+					Expect a yes/no response.
+					Output only that one question.
+					""";
+			break;
+
+		case "endAgentChat":
+			prompt = """
+					INSTRUCTION:
+					When type is "endAgentChat":
+					Thank the user for contacting support and let them know you’re here if they need anything else.
+					Politely close the conversation.
+					Output only that one message.
+					""";
+			break;
+
 		default:
 			prompt = """
 					INSTRUCTION:
 					You are a helpful assistant. I ran action "%s" with data shown below.
 					Reply in one or two friendly sentences using only data fields.
-
+					Markdown only—no HTML or plain text.
+					Hotel lists must be a numbered list
+					Always end with a clear question or call-to-action in the user’s language.
+					Never add, remove or reorder any data (stars, prices, dates, arrows, punctuation, list order).
+					Vary your phrasing when asking the same thing twice
 					DATA:
 					%s
 					""".formatted(action, data);
 		}
 
+//		ChatCompletionRequest req = ChatCompletionRequest.builder().model("gpt-4o-mini")
+//				.messages(List.of(new ChatMessage("system", prompt))).build();
+
+//		ChatCompletionRequest req = ChatCompletionRequest.builder().model("gpt-4o-mini")
+//				.messages(withSystemPrompt(prompt)).build();
+
 		ChatCompletionRequest req = ChatCompletionRequest.builder().model("gpt-4o-mini")
-				.messages(List.of(new ChatMessage("system", prompt))).build();
+				.messages(withSystemPrompt(prompt, ctx)) // <-- two-arg
+				.build();
 
 		ChatCompletionResult res = client.createChatCompletion(req);
 		return res.getChoices().get(0).getMessage().getContent().trim();
@@ -412,5 +529,43 @@ public class OpenAiService3 implements NLPService3 {
 	private String buildContextString(ConversationState ctx) {
 		return "stage=" + ctx.getStage() + ", city=" + ctx.getCity() + ", checkIn=" + ctx.getCheckIn() + ", checkOut="
 				+ ctx.getCheckOut() + ", guests=" + ctx.getGuests();
+	}
+
+	@Override
+	public List<String> translateList(List<String> items, String targetLang) {
+		// 1) to JSON
+		String jsonList;
+		try {
+			jsonList = mapper.writeValueAsString(items);
+		} catch (JsonProcessingException e) {
+			return items;
+		}
+
+		// 2) ask GPT to translate the JSON array
+		String prompt = String.format("You are a localization assistant.%n" + "%n"
+				+ "Input: a JSON array of suggestion strings in English.%n" + "%n" + "Task:%n"
+				+ "- Translate all *free-text* parts into %s.%n"
+				+ "- Preserve **exactly** every numeric value, ISO date (YYYY-MM-DD), arrow (→), currency symbol, range notation, punctuation, and formatting.%n"
+				+ "- Do not add, remove, merge, split, reorder, or modify any array items or their structure.%n" + "%n"
+				+ "Output:%n" + "Return *only* the translated JSON array of the same length and order—no extra text.",
+				targetLang);
+
+		ChatCompletionRequest req = ChatCompletionRequest.builder().model("gpt-4o-mini")
+				.messages(List.of(new ChatMessage("system", prompt), new ChatMessage("user", jsonList))).build();
+
+		String res = client.createChatCompletion(req).getChoices().get(0).getMessage().getContent().trim();
+
+		// 3) strip code fences
+		if (res.startsWith("```")) {
+			res = res.replaceAll("(?s)```.*?```", "").trim();
+		}
+
+		// 4) parse JSON back to Java
+		try {
+			return mapper.readValue(res, new TypeReference<List<String>>() {
+			});
+		} catch (Exception e) {
+			return items;
+		}
 	}
 }

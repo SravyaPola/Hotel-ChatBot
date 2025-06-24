@@ -1,139 +1,171 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 
 <head>
 	<meta charset="UTF-8" />
 	<title>Home Page of Hotel Chat-Bot</title>
+
+	<!-- External libs (unchanged) -->
 	<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css" />
 	<script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.min.js"></script>
 	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" />
-	<link rel="stylesheet" type="text/css" href="home.css" />
+
+	<!-- Your custom theme CSS -->
+	<link rel="stylesheet" href="home.css" />
 </head>
 
 <body>
-
 	<div class="container" style="margin-left: 100px;">
 		<h1>Welcome to Booking Hotels Page</h1>
 		<h2>Search your desired hotel Below:</h2>
-	</div>
-	<button id="btnLogout" class="btn btn-secondary">Logout</button>
+		<button id="btnLogout" title="Logout">
+			<i class="fa fa-sign-out"></i>
+		</button>
 
-	<!-- === Search Form === -->
-	<div class="container border rounded" style="margin: auto; padding: 50px; margin-top: 50px; margin-bottom: 50px;">
-		<h5>Narrow your search results</h5>
-		<div class="form-row">
-			<div class="col-3">
-				Hotel/City/State
-				<input class="form-control" type="text" id="searchLocation" name="searchLocation" />
+		<!-- === Search Panel === -->
+		<div class="search-panel">
+			<h5>Narrow your search results</h5>
+			<div class="form-row align-items-end">
+				<div class="col-3">
+					<label for="searchLocation">Hotel/City/State</label>
+					<input class="form-control" type="text" id="searchLocation" name="searchLocation" />
+				</div>
+				<div class="col-2">
+					<label for="noRooms">No. Rooms</label>
+					<input class="form-control" type="number" id="noRooms" name="noRooms" min="1" value="1" required />
+				</div>
+				<div class="col-2">
+					<label for="noGuests">No. Guests</label>
+					<input class="form-control" type="number" id="noGuests" name="noGuests" min="1" value="1"
+						required />
+				</div>
+				<div class="col-2">
+					<label for="checkInDate">Check-In Date</label>
+					<input class="form-control" type="date" id="checkInDate" name="checkInDate" />
+				</div>
+				<div class="col-2">
+					<label for="checkOutDate">Check-Out Date</label>
+					<input class="form-control" type="date" id="checkOutDate" name="checkOutDate" />
+				</div>
+				<div class="col-auto">
+					<button id="searchBtn" class="btn-search">SEARCH</button>
+				</div>
 			</div>
-			<div class="col-2">
-				No. Rooms:
-				<input class="form-control" type="number" id="noRooms" name="noRooms" min="1" value="1" required />
-			</div>
-			<div class="col-2">
-				No. Guests:
-				<input class="form-control" type="number" id="noGuests" name="noGuests" min="1" value="1" required />
-			</div>
-			<div class="col">
-				Check-In Date:
-				<input type="date" id="checkInDate" name="checkInDate" />
-			</div>
-			<div class="col">
-				Check-Out Date:
-				<input type="date" id="checkOutDate" name="checkOutDate" />
-			</div>
-			<input class="btn-sm btn-primary" type="button" id="searchBtn" value="SEARCH" />
+		</div>
+
+		<!-- === Filters & Results === -->
+		<div class="row">
+			<aside class="sidebar">
+				<h5>Star Rating:</h5>
+				<div class="form-check">
+					<input type="checkbox" class="star_rating form-check-input" id="1_star_rating" value="1" />
+					<label class="form-check-label" for="1_star_rating">1</label>
+				</div>
+				<div class="form-check">
+					<input type="checkbox" class="star_rating form-check-input" id="2_star_rating" value="2" />
+					<label class="form-check-label" for="2_star_rating">2</label>
+				</div>
+				<div class="form-check">
+					<input type="checkbox" class="star_rating form-check-input" id="3_star_rating" value="3" />
+					<label class="form-check-label" for="3_star_rating">3</label>
+				</div>
+				<div class="form-check">
+					<input type="checkbox" class="star_rating form-check-input" id="4_star_rating" value="4" />
+					<label class="form-check-label" for="4_star_rating">4</label>
+				</div>
+				<div class="form-check">
+					<input type="checkbox" class="star_rating form-check-input" id="5_star_rating" value="5" />
+					<label class="form-check-label" for="5_star_rating">5</label>
+				</div>
+
+				<div class="slider-container">
+					<label for="priceRange">Range:</label>
+					<input type="range" min="1" max="500" value="500" class="slider" id="priceRange" />
+					<p>Price: $<span id="priceValue">500</span></p>
+				</div>
+
+				<h5>Filters:</h5>
+				<div class="form-check">
+					<input type="checkbox" class="hotel_amenity form-check-input" id="amenity_parking"
+						value="PARKING" />
+					<label class="form-check-label" for="amenity_parking">Parking</label>
+				</div>
+				<div class="form-check">
+					<input type="checkbox" class="hotel_amenity form-check-input" id="amenity_breakfast"
+						value="BREAKFAST" />
+					<label class="form-check-label" for="amenity_breakfast">Breakfast</label>
+				</div>
+				<div class="form-check">
+					<input type="checkbox" class="hotel_amenity form-check-input" id="amenity_wifi" value="WIFI" />
+					<label class="form-check-label" for="amenity_wifi">WiFi</label>
+				</div>
+				<div class="form-check">
+					<input type="checkbox" class="hotel_amenity form-check-input" id="amenity_fitness_center"
+						value="FITNESS CENTER" />
+					<label class="form-check-label" for="amenity_fitness_center">Fitness Center</label>
+				</div>
+				<div class="form-check">
+					<input type="checkbox" class="hotel_amenity form-check-input" id="amenity_bar_lounge"
+						value="BAR OR LOUNGE" />
+					<label class="form-check-label" for="amenity_bar_lounge">Bar / Lounge</label>
+				</div>
+				<div class="form-check">
+					<input type="checkbox" class="hotel_amenity form-check-input" id="amenity_spa_services"
+						value="SPA SERVICES" />
+					<label class="form-check-label" for="amenity_spa_services">Spa Services</label>
+				</div>
+				<div class="form-check">
+					<input type="checkbox" class="hotel_amenity form-check-input" id="amenity_swimming_pool"
+						value="SWIMMING POOL" />
+					<label class="form-check-label" for="amenity_swimming_pool">Swimming Pool</label>
+				</div>
+				<div class="form-check">
+					<input type="checkbox" class="hotel_amenity form-check-input" id="amenity_pet_friendly"
+						value="PET-FRIENDLY" />
+					<label class="form-check-label" for="amenity_pet_friendly">Pet-Friendly</label>
+				</div>
+				<div class="form-check">
+					<input type="checkbox" class="hotel_amenity form-check-input" id="amenity_airport_shuttle"
+						value="AIRPORT SHUTTLE" />
+					<label class="form-check-label" for="amenity_airport_shuttle">Airport Shuttle</label>
+				</div>
+				<div class="form-check">
+					<input type="checkbox" class="hotel_amenity form-check-input" id="amenity_business_center"
+						value="BUSINESS CENTER" />
+					<label class="form-check-label" for="amenity_business_center">Business Center</label>
+				</div>
+
+				<button id="filterBtn" class="btn-search">FILTER</button>
+			</aside>
+
+			<section class="results">
+				<h5>List of Hotels:</h5>
+				<div id="listHotel"><!-- Dynamically populated by AJAX --></div>
+			</section>
 		</div>
 	</div>
 
-	<!-- === Filters (left column) & Results (right column) === -->
-	<div class="row">
-		<div class="col-2 border rounded" style="margin-left: 50px; padding: 25px;">
-			<br />
-			<!-- Star Rating filters (commented out in your original) -->
-			Star Rating:<br />
-			<div class="form-check-inline">
-				<label class="form-check-label"> <input type="checkbox" class="star_rating form-check-input"
-						id="1_star_rating" value="1" />1 </label>
-			</div>
-			<div class="form-check-inline">
-				<label class="form-check-label"> <input type="checkbox" class="star_rating form-check-input"
-						id="2_star_rating" value="2" />2 </label>
-			</div>
-			<div class="form-check-inline">
-				<label class="form-check-label"> <input type="checkbox" class="star_rating form-check-input"
-						id="3_star_rating" value="3" />3 </label>
-			</div>
-			<div class="form-check-inline">
-				<label class="form-check-label"> <input type="checkbox" class="star_rating form-check-input"
-						id="4_star_rating" value="4" />4 </label>
-			</div>
-			<div class="form-check-inline">
-				<label class="form-check-label"> <input type="checkbox" class="star_rating form-check-input"
-						id="5_star_rating" value="5" />5 </label>
-			</div>
-			<br />
-			<br />
+	<!-- Chat Widget (unchanged) -->
+	<!-- Chat Widget MARKUP (no jQuery include here!) -->
+	<div id="chatWidget">
+		<div id="chatHeader"><i class="fa fa-comments"></i></div>
+		<button id="chatClose"><i class="fa fa-times"></i></button>
+		<div id="chatBody"></div>
+		<div id="chatInput" style="display:flex; align-items:center;">
+		  <!-- language picker -->
+		  <select id="language-select" style="margin-right:8px;">
+		    <option value="en" selected>English</option>
+		    <option value="es">Español</option>
+		    <option value="fr">Français</option>
+		    <option value="de">Deutsch</option>
+		  </select>
 
-			Range:
-			<div class="slidecontainer">
-				<input type="range" min="1" max="500" value="500" class="slider" id="priceRange" />
-				<p>Price: $<span id="priceValue"></span></p>
-			</div>
-
-			<div class="form-check">
-				<input type="checkbox" class="hotel_amenity form-check-input" id="amenity_parking" value="PARKING" />
-				<label class="form-check-label" for="amenity_parking">Parking</label><br />
-
-				<input type="checkbox" class="hotel_amenity form-check-input" id="amenity_breakfast"
-					value="BREAKFAST" />
-				<label class="form-check-label" for="amenity_breakfast">Breakfast</label><br />
-
-				<input type="checkbox" class="hotel_amenity form-check-input" id="amenity_wifi" value="WIFI" />
-				<label class="form-check-label" for="amenity_wifi">WiFi</label><br />
-
-				<input type="checkbox" class="hotel_amenity form-check-input" id="amenity_fitness_center"
-					value="FITNESS CENTER" />
-				<label class="form-check-label" for="amenity_fitness_center">Fitness Center</label><br />
-
-				<input type="checkbox" class="hotel_amenity form-check-input" id="amenity_bar_lounge"
-					value="BAR OR LOUNGE" />
-				<label class="form-check-label" for="amenity_bar_lounge">Bar / Lounge</label><br />
-
-				<input type="checkbox" class="hotel_amenity form-check-input" id="amenity_spa_services"
-					value="SPA SERVICES" />
-				<label class="form-check-label" for="amenity_spa_services">Spa Services</label><br />
-
-				<input type="checkbox" class="hotel_amenity form-check-input" id="amenity_swimming_pool"
-					value="SWIMMING POOL" />
-				<label class="form-check-label" for="amenity_swimming_pool">Swimming Pool</label><br />
-
-				<input type="checkbox" class="hotel_amenity form-check-input" id="amenity_pet_friendly"
-					value="PET-FRIENDLY" />
-				<label class="form-check-label" for="amenity_pet_friendly">Pet-Friendly</label><br />
-
-				<input type="checkbox" class="hotel_amenity form-check-input" id="amenity_airport_shuttle"
-					value="AIRPORT SHUTTLE" />
-				<label class="form-check-label" for="amenity_airport_shuttle">Airport Shuttle</label><br />
-
-				<input type="checkbox" class="hotel_amenity form-check-input" id="amenity_business_center"
-					value="BUSINESS CENTER" />
-				<label class="form-check-label" for="amenity_business_center">Business Center</label><br />
-			</div>
-
-			<input style="margin-top: 25px;" class="btn btn-primary" type="button" id="filterBtn" value="FILTER" />
+		  <!-- chat textbox + send -->
+		  <input id="chatMsg" placeholder="Type a message…" style="flex:1;" />
+		  <button id="sendChat"><i class="fa fa-paper-plane"></i></button>
 		</div>
 
-		<div class="col-7 border rounded" style="margin-left: 50px;">
-			<div style="text-align: center; font-size: 20px; font-family: 'Trebuchet MS', Helvetica, sans-serif;">
-				List of Hotels:
-			</div>
-
-			<div id="listHotel">
-				<!-- Dynamically populated by AJAX -->
-			</div>
-		</div>
 	</div>
 
 	<!-- === Modal: Search Hotel Rooms === -->
@@ -243,22 +275,9 @@
 	</div>
 
 
-	<!-- Chat Widget MARKUP (no jQuery include here!) -->
-	<div id="chatWidget" style="position: fixed; bottom: 20px; right: 20px; width: 320px;">
-		<div id="chatHeader" style="background:#007bff;color:white;padding:10px;cursor:pointer;">
-			Chat with Us
-		</div>
-		<div id="chatBody" style="display:none;border:1px solid #007bff;
-	          background:white;height:350px;overflow-y:auto;padding:10px;">
-		</div>
-		<div id="chatInput" style="border:1px solid #007bff;
-	          border-top:none;padding:5px;display:flex;display:none;">
-			<input type="text" id="chatMsg" style="flex:1;border:none;padding:8px;" placeholder="Type a message..." />
-			<button id="sendChat" style="border:none;padding:8px 12px;background:#007bff;color:white;">
-				Send
-			</button>
-		</div>
-	</div>
+
+
+
 
 
 	<!-- === Modal: Booking Confirmation === -->
@@ -757,9 +776,11 @@
 			// …
 
 			// === Chat widget handlers ===
-			$("#chatHeader").on("click", function () {
-				$("#chatBody, #chatInput").toggle();
+			$("#chatHeader, #chatClose").on("click", () => {
+				$("#chatWidget").toggleClass("open");
 			});
+
+
 			let convState = null;  // holds the current dialog state
 
 			$("#sendChat").on("click", function () {
@@ -778,7 +799,8 @@
 					dataType: "json",
 					data: JSON.stringify({
 						message: msg,
-						state: convState
+						state: convState,
+						language: $("#language-select").val()
 					}),
 					success: data => {
 						// 1) update our state
