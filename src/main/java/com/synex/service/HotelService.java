@@ -1,11 +1,9 @@
-// src/main/java/com/synex/service/HotelService.java
 package com.synex.service;
 
 import com.synex.domain.Hotel;
 import com.synex.domain.HotelRoom;
 import com.synex.domain.ServiceOption;
 import com.synex.domain.RoomType;
-
 import java.util.List;
 import java.util.Set;
 
@@ -45,7 +43,7 @@ public interface HotelService {
 	double computeServiceCost(List<ServiceOption> opts, int guests, long nights);
 
 	List<RoomType> getAllRoomTypes();
-	
+
 	List<Hotel> findAll();
 
 	List<HotelRoom> getRoomsForHotel(Integer hotelId);

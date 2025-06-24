@@ -1,4 +1,3 @@
-// src/main/java/com/synex/domain/ServiceOption.java
 package com.synex.domain;
 
 import jakarta.persistence.*;

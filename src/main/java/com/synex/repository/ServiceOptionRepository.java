@@ -1,4 +1,3 @@
-// src/main/java/com/synex/repo/ServiceOptionRepository.java
 package com.synex.repository;
 
 import com.synex.domain.ServiceOption;

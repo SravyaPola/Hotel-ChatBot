@@ -1,4 +1,3 @@
-// src/main/java/com/synex/service/impl/HotelServiceImpl.java
 package com.synex.service;
 
 import com.synex.domain.Amenity;
@@ -13,7 +12,6 @@ import com.synex.repository.RoomTypeRepository;
 import com.synex.repository.ServiceOptionRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -108,9 +106,8 @@ public class HotelServiceImpl implements HotelService {
 							.collect(Collectors.toSet());
 
 					// requested amenities lowercased
-					Set<String> want = requiredAmenities == null
-						    ? Collections.emptySet()
-						    : requiredAmenities.stream().map(String::toLowerCase).collect(Collectors.toSet());
+					Set<String> want = requiredAmenities == null ? Collections.emptySet()
+							: requiredAmenities.stream().map(String::toLowerCase).collect(Collectors.toSet());
 
 					return has.containsAll(want);
 				}).collect(Collectors.toList());
@@ -180,6 +177,6 @@ public class HotelServiceImpl implements HotelService {
 
 	@Override
 	public List<Hotel> getAllHotels() {
-	    return hotelRepo.findAll();
+		return hotelRepo.findAll();
 	}
 }

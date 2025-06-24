@@ -1,9 +1,7 @@
-// src/main/java/com/synex/domain/ConversationState.java
 package com.synex.domain;
 
 import java.time.LocalDate;
 import java.util.*;
-
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
 public class ConversationState {
@@ -379,4 +377,40 @@ public class ConversationState {
 	public void setSubtotal(double subtotal) {
 		Subtotal = subtotal;
 	}
+	// in ConversationState.java, after all your getters/setters:
+
+	/** Completely clear out this state and go back to the very beginning. */
+	public void reset() {
+		this.stage = Stage.START;
+		this.city = null;
+		this.state = null;
+		this.checkIn = null;
+		this.checkOut = null;
+		this.guests = null;
+		clearFilters(); // your helper to clear minStars, minPrice, maxPrice, requiredAmenities
+		this.roomType = null;
+		this.noRooms = null;
+		this.customerName = null;
+		this.hotelName = null;
+		this.hotelId = null;
+		this.Subtotal = 0.0;
+		this.RoomPrice = 0.0;
+		this.lastHotels.clear();
+		this.filteredHotels.clear();
+		this.selectedHotelIndex = null;
+		this.chosenHotel = null;
+		this.lastServiceOptions.clear();
+		this.chosenServiceOptions.clear();
+		this.lastRoomTypes.clear();
+		this.chosenRoom = null;
+		this.hotelRoomId = null;
+		this.confirmBook = null;
+		this.confirmAnother = null;
+		this.confirmAddAnother = null;
+		this.confirmRefine = null;
+		this.paymentDone = null;
+		this.feedbackRating = null;
+		this.feedbackComments = null;
+	}
+
 }

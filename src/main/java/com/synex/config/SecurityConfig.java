@@ -1,77 +1,87 @@
 package com.synex.config;
 
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
+import java.io.IOException;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.config.Customizer;
-import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.web.AuthenticationEntryPoint;
-import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.core.userdetails.User;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.crypto.password.NoOpPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.provisioning.InMemoryUserDetailsManager;
+import org.springframework.security.web.*;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-
-import java.io.IOException;
-import java.util.List;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
 
-  private final JwtTokenProvider tokenProvider;
-  private final JwtAuthenticationFilter jwtAuthFilter;
+	private final JwtAuthenticationFilter jwtAuthFilter;
 
-  public SecurityConfig(JwtTokenProvider tokenProvider,
-                        JwtAuthenticationFilter jwtAuthFilter) {
-    this.tokenProvider = tokenProvider;
-    this.jwtAuthFilter = jwtAuthFilter;
-  }
+	public SecurityConfig(JwtAuthenticationFilter jwtAuthFilter) {
+		this.jwtAuthFilter = jwtAuthFilter;
+	}
 
-  @Bean
-  public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-    http
-      // disable CSRF if you’re only doing a stateless API
-      .csrf(csrf -> csrf.disable())
+	// <-- Add this bean so Spring can inject AuthenticationManager
+	@Bean
+	public AuthenticationManager authenticationManager(AuthenticationConfiguration authConfig) throws Exception {
+		return authConfig.getAuthenticationManager();
+	}
 
-      // 1) our token endpoint must be open
-      .authorizeHttpRequests(auth -> auth
-        .requestMatchers(HttpMethod.GET, "/api/chat/token").permitAll()
-        // if you also want to allow swagger, favicon, etc. you can add more here
-        .anyRequest().authenticated()
-      )
+	@Bean
+	public UserDetailsService userDetailsService(@Value("${app.auth.username}") String username,
+			@Value("${app.auth.password}") String password) {
+		// Because we’re registering a NoOpPasswordEncoder below,
+		// we can store the raw password directly.
+		UserDetails user = User.withUsername(username).password(password).roles("USER").build();
+		return new InMemoryUserDetailsManager(user);
+	}
 
-      // 2) insert our JWT filter so it runs _before_ Spring’s UsernamePasswordAuthFilter
-      .addFilterBefore(jwtAuthFilter, 
-                       UsernamePasswordAuthenticationFilter.class)
+	@Bean
+	public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+		http.csrf(csrf -> csrf.disable())
+				.sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+				.formLogin(AbstractHttpConfigurer::disable).httpBasic(AbstractHttpConfigurer::disable)
 
-      // 3) when someone isn’t authorized, render our little HTML snippet
-      .exceptionHandling(ex -> ex
-        .authenticationEntryPoint(html401EntryPoint())
-      );
+				.authorizeHttpRequests(auth -> auth
+						// public endpoints
+						.requestMatchers("/login.html", "/js/**", "/css/**").permitAll()
+						.requestMatchers(HttpMethod.GET, "/api/chat/token").permitAll()
+						.requestMatchers(HttpMethod.POST, "/api/auth/login", "/api/auth/refresh").permitAll()
+						// everything else requires JWT
+						.anyRequest().authenticated())
 
-    return http.build();
-  }
+				.addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
+				.exceptionHandling(ex -> ex.authenticationEntryPoint(this::commence));
 
-  // your “show me that pretty red HTML on 401” entry point:
-  @Bean
-  public AuthenticationEntryPoint html401EntryPoint() {
-    return (req, resp, ex) -> {
-      resp.setContentType("text/html;charset=UTF-8");
-      resp.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-      resp.getWriter().write("""
-        <div style="margin:2em;font-family:sans-serif;color:#a00">
-          <h1>Access Denied</h1>
-          <p>You must supply a valid JWT to view this application.</p>
-          <p>Run in terminal:</p>
-          <pre>curl http://localhost:8080/api/chat/token</pre>
-          <p>and then open this URL in your browser:</p>
-          <pre>http://localhost:8080/Home.html?token=<em>PASTE_YOUR_TOKEN</em></pre>
-        </div>
-      """);
-    };
-  }
+		return http.build();
+	}
+
+	private void commence(HttpServletRequest req, HttpServletResponse res,
+			org.springframework.security.core.AuthenticationException ex) throws IOException {
+		String uri = req.getRequestURI();
+		if (uri.startsWith("/api/")) {
+			res.setContentType("application/json");
+			res.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+			res.getWriter().write("{\"error\":\"Unauthorized\"}");
+		} else {
+			res.sendRedirect("/login.html");
+		}
+	}
+
+	@Bean
+	@SuppressWarnings("deprecation")
+	public PasswordEncoder passwordEncoder() {
+		return NoOpPasswordEncoder.getInstance();
+	}
 }

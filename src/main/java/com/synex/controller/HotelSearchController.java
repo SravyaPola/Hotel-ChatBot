@@ -61,7 +61,8 @@ public class HotelSearchController {
 
 		int available = room.getNoRooms() - alreadyBooked;
 		if (available < booking.getNoRooms()) {
-			String msg = available == 0 ? "This Room Types are fully booked for the selected dates. Please try other room types."
+			String msg = available == 0
+					? "This Room Types are fully booked for the selected dates. Please try other room types."
 					: "Only " + available + " room(s) available for those dates.";
 			return ResponseEntity.status(HttpStatus.CONFLICT).body(Collections.singletonMap("error", msg));
 		}

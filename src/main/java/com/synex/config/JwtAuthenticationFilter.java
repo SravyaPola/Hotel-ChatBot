@@ -6,56 +6,50 @@ import jakarta.servlet.http.*;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
-
 import java.io.IOException;
 import java.util.List;
-import org.springframework.stereotype.Component;
-import org.springframework.web.filter.OncePerRequestFilter;
-// … your imports …
 
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
-    private final JwtTokenProvider tokenProvider;
+	private final JwtTokenProvider tokenProvider;
 
-    public JwtAuthenticationFilter(JwtTokenProvider tokenProvider) {
-        this.tokenProvider = tokenProvider;
-    }
+	public JwtAuthenticationFilter(JwtTokenProvider tokenProvider) {
+		this.tokenProvider = tokenProvider;
+	}
 
-    @Override
-    protected void doFilterInternal(HttpServletRequest req,
-                                    HttpServletResponse res,
-                                    FilterChain chain)
-        throws ServletException, IOException {
+	@Override
+	protected void doFilterInternal(HttpServletRequest req, HttpServletResponse res, FilterChain chain)
+			throws ServletException, IOException {
 
-      String jwt = null;
-      String hdr = req.getHeader("Authorization");
-      if (StringUtils.hasText(hdr) && hdr.startsWith("Bearer ")) {
-        jwt = hdr.substring(7);
-      }
-      else if (req.getParameter("token") != null) {
-        jwt = req.getParameter("token");
-      }
-      else if (req.getCookies() != null) {
-        for (Cookie c : req.getCookies()) {
-          if ("token".equals(c.getName())) {
-            jwt = c.getValue();
-            break;
-          }
-        }
-      }
+		String jwt = null;
 
-      // ONLY if valid do we set an Authentication
-      if (jwt != null && tokenProvider.validateToken(jwt)) {
-        String subject = tokenProvider.getSubjectFromToken(jwt);
-        Authentication auth = new UsernamePasswordAuthenticationToken(subject,
-                                                                      null,
-                                                                      List.of());
-        SecurityContextHolder.getContext().setAuthentication(auth);
-      }
+		// 1) Try the Authorization header
+		String bearer = req.getHeader("Authorization");
+		if (StringUtils.hasText(bearer) && bearer.startsWith("Bearer ")) {
+			jwt = bearer.substring(7);
+		}
 
-      chain.doFilter(req, res);
-    }
+		// 2) Otherwise try the accessToken cookie
+		if (jwt == null && req.getCookies() != null) {
+			for (Cookie c : req.getCookies()) {
+				if ("accessToken".equals(c.getName())) {
+					jwt = c.getValue();
+					break;
+				}
+			}
+		}
+
+		// 3) If we got a token and it checks out, set authentication
+		if (jwt != null && tokenProvider.validateToken(jwt)) {
+			String user = tokenProvider.getSubjectFromToken(jwt);
+			Authentication auth = new UsernamePasswordAuthenticationToken(user, null, List.of());
+			SecurityContextHolder.getContext().setAuthentication(auth);
+		}
+
+		chain.doFilter(req, res);
+	}
 }

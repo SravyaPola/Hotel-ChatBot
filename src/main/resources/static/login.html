@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="UTF-8" />
+	<title>Login</title>
+	<style>
+		body {
+			font-family: sans-serif;
+			display: flex;
+			height: 100vh;
+			align-items: center;
+			justify-content: center;
+		}
+
+		form {
+			border: 1px solid #ccc;
+			padding: 2em;
+			border-radius: 8px;
+		}
+
+		.error {
+			color: #a00;
+			margin-top: 1em;
+		}
+	</style>
+</head>
+
+<body>
+	<form id="loginForm">
+		<h2>Please sign in</h2>
+		<div>
+			<label for="username">Username</label><br />
+			<input id="username" name="username" type="text" required autocomplete="username" />
+		</div>
+		<div style="margin-top:1em">
+			<label for="password">Password</label><br />
+			<input id="password" name="password" type="password" required autocomplete="current-password" />
+		</div>
+		<div style="margin-top:1em">
+			<button type="submit">Login</button>
+		</div>
+		<div id="error" class="error"></div>
+	</form>
+
+	<script>
+		document.getElementById('loginForm').addEventListener('submit', async function (e) {
+			e.preventDefault();
+			document.getElementById('error').textContent = '';
+
+			// now these will work, because we added name="username"/"password"
+			const username = this.username.value.trim();
+			const password = this.password.value;
+
+			try {
+				const resp = await fetch('/api/auth/login', {
+					method: 'POST',
+					headers: {'Content-Type': 'application/json'},
+					credentials: 'include',    // ← must include cookies
+					body: JSON.stringify({username, password})
+				});
+
+				if (!resp.ok) {
+					const err = await resp.json().catch(() => ({}));
+					throw new Error(err.error || err.message || 'Login failed');
+				}
+
+				// on success, cookies are set by the server
+				window.location.href = '/home.html';
+			} catch (err) {
+				document.getElementById('error').textContent = err.message;
+			}
+		});
+	</script>
+</body>
+
+</html>

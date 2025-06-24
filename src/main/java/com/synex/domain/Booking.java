@@ -35,9 +35,9 @@ public class Booking {
 
 	@Column(length = 500)
 	private String serviceList;
-	
+
 	@Column(name = "total_price", nullable = true)
-	private Double totalPrice;  // or BigDecimal for currency precision
+	private Double totalPrice; // or BigDecimal for currency precision
 
 	@Column(nullable = true)
 	private boolean paymentDone;
@@ -53,13 +53,15 @@ public class Booking {
 	public Integer getHotelId() {
 		return hotelId;
 	}
+
 	public Double getTotalPrice() {
-	    return totalPrice;
+		return totalPrice;
 	}
 
 	public void setTotalPrice(Double totalPrice) {
-	    this.totalPrice = totalPrice;
+		this.totalPrice = totalPrice;
 	}
+
 	public void setHotelId(Integer hotelId) {
 		this.hotelId = hotelId;
 	}

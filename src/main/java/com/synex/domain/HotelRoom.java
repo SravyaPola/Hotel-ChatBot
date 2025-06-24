@@ -32,8 +32,6 @@ public class HotelRoom {
 	@ManyToOne(fetch = FetchType.EAGER)
 	@JoinColumn(name = "type_id", nullable = false)
 	private RoomType type;
-	
-	
 
 	@ManyToMany(fetch = FetchType.EAGER)
 	@JoinTable(name = "hotel_rooms_amenities", joinColumns = @JoinColumn(name = "hotel_room_id"), inverseJoinColumns = @JoinColumn(name = "a_id"))
@@ -58,8 +56,8 @@ public class HotelRoom {
 
 	@PostLoad
 	private void initTransients() {
-		 this.hotelName = hotel != null ? hotel.getHotelName() : null;
-		 this.roomTypeName = type != null ? type.getName() : null;
+		this.hotelName = hotel != null ? hotel.getHotelName() : null;
+		this.roomTypeName = type != null ? type.getName() : null;
 		this.amenityNames = amenities.stream().map(Amenity::getName).collect(Collectors.toSet());
 	}
 
