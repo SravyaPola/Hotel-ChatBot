@@ -15,8 +15,6 @@ public class ConversationState {
 	}
 
 	private Stage stage = Stage.START;
-
-	// ─── user inputs ───
 	private String hotelName;
 	private Integer hotelId;
 	private double Subtotal;
@@ -30,12 +28,9 @@ public class ConversationState {
 	private Double maxPrice;
 	private String language;
 	private Set<String> requiredAmenities = new HashSet<>();
-	private String roomType; // holds the name the user types
-	private Integer noRooms; // how many rooms they want
-	// the name to put on the booking
-	// + getters/setters…
+	private String roomType;
+	private Integer noRooms;
 	private double RoomPrice;
-
 	private List<Hotel> lastHotels = new ArrayList<>();
 	@JsonIgnore
 	private List<Hotel> filteredHotels = new ArrayList<>();
@@ -56,40 +51,20 @@ public class ConversationState {
 	private Integer feedbackRating;
 	@JsonIgnore
 	private String feedbackComments;
-
-	// ─── NEW FIELDS for ChatService ───
-
 	private List<ServiceOption> lastServiceOptions = new ArrayList<>();
-
 	private List<ServiceOption> chosenServiceOptions = new ArrayList<>();
-
 	private Integer serviceQuantityDays;
-
 	private List<RoomType> lastRoomTypes = new ArrayList<>();
-
 	@JsonIgnore
 	private HotelRoom chosenRoom;
-
 	private Integer hotelRoomId;
 	private Boolean confirmRefine;
 	private String agentRequestName;
 	private String agentRequestPhone;
 	private Stage previousStage;
-
 	private String customerName;
-	private Boolean confirmContinue; // <— new
-	// … getters & setters …
+	private Boolean confirmContinue;
 	private Boolean confirmLoyaltyDiscount;
-	// In ConversationState.java
-	private Double subtotalDiscount;
-
-	public Double getSubtotalDiscount() {
-		return subtotalDiscount;
-	}
-
-	public void setSubtotalDiscount(Double d) {
-		subtotalDiscount = d;
-	}
 
 	public Boolean getConfirmLoyaltyDiscount() {
 		return confirmLoyaltyDiscount;
@@ -109,11 +84,6 @@ public class ConversationState {
 
 	public ConversationState() {
 	}
-
-	// ─── getters & setters for all existing fields ───
-	// ... (omit for brevity; keep all your originals) ...
-
-	// ─── getters & setters for new fields ───
 
 	public List<ServiceOption> getLastServiceOptions() {
 		return lastServiceOptions;
@@ -187,8 +157,6 @@ public class ConversationState {
 		this.customerName = customerName;
 	}
 
-	// ─── helper ───
-	/** Clear only the filter‐related slots. */
 	public void clearFilters() {
 		this.minStars = null;
 		this.minPrice = null;

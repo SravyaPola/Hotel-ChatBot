@@ -12,9 +12,8 @@ public class AmenityMatcher {
 			String clean = given.trim().toLowerCase().replaceAll("[^a-z]", "");
 			for (String dbAm : dbAmenities) {
 				String dbClean = dbAm.toLowerCase().replaceAll("[^a-z]", "");
-				// Use contains or is contained (simple fuzzy)
 				if (clean.contains(dbClean) || dbClean.contains(clean)) {
-					matched.add(dbAm); // Use DB/canonical name!
+					matched.add(dbAm);
 				}
 			}
 		}
