@@ -369,6 +369,16 @@ public class OpenAiService3 implements NLPService3 {
 					"""
 					.formatted(data);
 			break;
+		case "loyaltyDiscountOffer":
+			prompt = """
+					    The user is eligible for a loyalty discount.
+					    The discount percent is data.discount (for example, 0.15 means 15%%).
+					    Politely let the user know they are eligible for a {data.discount * 100}%% loyalty discount.
+					    Ask them if they'd like to apply it to their booking (expect Yes/No).
+					    Do NOT reveal any implementation details.
+					    DATA: %s
+					""".formatted(data);
+			break;
 
 		case "createBooking":
 			prompt = """

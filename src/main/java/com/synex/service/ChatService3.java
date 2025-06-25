@@ -567,7 +567,24 @@ public class ChatService3 {
 				return new ChatResponse(reply, false, getSuggestionsForStage(ConversationState.Stage.ASK_ANOTHER, st),
 						st);
 			} else {
-				// Only now create the booking
+				// --- Loyalty check logic START ---
+				// 1. Has the user booked this hotel before?
+				boolean eligible = bookingService.userHasBookedHotelBefore(st.getCustomerName(), st.getHotelId());
+				// 2. Is there a discount for this hotel room?
+				double discount = hotelRoomService.findById(st.getHotelRoomId()).map(HotelRoom::getDiscount)
+						.orElse(0.0f).doubleValue();
+				if (eligible && discount > 0) {
+					// Don't create booking yet! Go to loyalty discount offer stage.
+					st.setStage(ConversationState.Stage.LOYALTY_DISCOUNT_OFFER);
+					// Suggestion: let your workflow/nlp generate the question, or just prompt
+					// below:
+					ActionResult loyaltyOffer = new ActionResult("loyaltyDiscountOffer", Map.of("discount", discount));
+					String reply = nlp.renderActionReply(loyaltyOffer, st);
+					return new ChatResponse(reply, false, List.of("Yes", "No"), st);
+				}
+				// --- Loyalty check logic END ---
+
+				// Your normal booking creation code:
 				List<String> services = st.getChosenServiceOptions() != null
 						? st.getChosenServiceOptions().stream().map(ServiceOption::getName).toList()
 						: List.of();
@@ -590,6 +607,48 @@ public class ChatService3 {
 				st.setStage(cfg.nextState().apply(st)); // To ASK_ANOTHER
 				return new ChatResponse(reply, false, getSuggestionsForStage(st.getStage(), st), st);
 			}
+		}
+
+		if (stage == ConversationState.Stage.LOYALTY_DISCOUNT_OFFER) {
+			StateConfig cfg = workflow.get(stage);
+			Map<String, String> slots = nlp.fillSlots(cfg.slotsNeeded(), userMsg);
+
+			Boolean confirmLoyaltyDiscount = Boolean.valueOf(slots.get("confirmLoyaltyDiscount"));
+			st.setConfirmLoyaltyDiscount(confirmLoyaltyDiscount);
+
+			// Get the discount for this hotel room
+			double discount = hotelRoomService.findById(st.getHotelRoomId()).map(HotelRoom::getDiscount).orElse(0.0f)
+					.doubleValue();
+
+			double subtotal = st.getSubtotal();
+
+			if (Boolean.TRUE.equals(confirmLoyaltyDiscount) && discount > 0) {
+				subtotal = Math.round(subtotal * (1 - discount) * 100.0) / 100.0;
+				st.setSubtotal(subtotal);
+			}
+
+			// Now create the booking (just like in SHOW_SUBTOTAL)
+			List<String> services = st.getChosenServiceOptions() != null
+					? st.getChosenServiceOptions().stream().map(ServiceOption::getName).toList()
+					: List.of();
+			int guests = Optional.ofNullable(st.getGuests()).orElse(1);
+			int noRooms = Optional.ofNullable(st.getNoRooms()).orElse(1);
+
+			Booking booking = bookingService.create(st.getHotelId(), st.getHotelRoomId(), noRooms, guests,
+					st.getCheckIn(), st.getCheckOut(), st.getCustomerName(), String.join(",", services), subtotal);
+			st.getBookingIds().add(booking.getBookingId());
+			String policies = hotelRoomService.findById(st.getHotelRoomId()).map(HotelRoom::getPolicies).orElse("");
+			ActionResult result = new ActionResult("loyaltyDiscountReply",
+					Map.of("applied", confirmLoyaltyDiscount, "discount", discount, "subtotal", subtotal, "bookingId",
+							booking.getBookingId(), "hotelName", st.getHotelName(), "customerName",
+							st.getCustomerName(), "roomType", st.getRoomType(), "guests", guests, "services", services,
+							"policies", policies // you can use .toString() if it's a list
+					));
+			String reply = nlp.renderActionReply(result, st);
+
+			// Proceed to ASK_ANOTHER
+			st.setStage(ConversationState.Stage.ASK_ANOTHER);
+			return new ChatResponse(reply, false, getSuggestionsForStage(st.getStage(), st), st);
 		}
 
 		if (stage == ConversationState.Stage.ASK_ANOTHER) {

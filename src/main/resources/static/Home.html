@@ -146,27 +146,31 @@
 		</div>
 	</div>
 
-	<!-- Chat Widget (unchanged) -->
-	<!-- Chat Widget MARKUP (no jQuery include here!) -->
-	<div id="chatWidget">
-		<div id="chatHeader"><i class="fa fa-comments"></i></div>
-		<button id="chatClose"><i class="fa fa-times"></i></button>
-		<div id="chatBody"></div>
-		<div id="chatInput" style="display:flex; align-items:center;">
-		  <!-- language picker -->
-		  <select id="language-select" style="margin-right:8px;">
-		    <option value="en" selected>English</option>
-		    <option value="es">Español</option>
-		    <option value="fr">Français</option>
-		    <option value="de">Deutsch</option>
-		  </select>
-
-		  <!-- chat textbox + send -->
-		  <input id="chatMsg" placeholder="Type a message…" style="flex:1;" />
-		  <button id="sendChat"><i class="fa fa-paper-plane"></i></button>
+	<div id="chatOverlay"></div>
+	<div id="chatWidget" class="chat-closed">
+		<!-- Chat Icon (always visible when closed) -->
+		<div id="chatHeader" class="chat-icon">
+			<i class="fa fa-comments"></i>
 		</div>
-
+		<!-- Chat Panel (visible only when open) -->
+		<div class="chat-panel">
+			<button id="chatClose" class="chat-close"><i class="fa fa-times"></i></button>
+			<div id="chatBody" class="chat-body"></div>
+			<div id="chatInput" class="chat-input">
+				<select id="language-select">
+					<option value="en" selected>English</option>
+					<option value="es">Español</option>
+					<option value="fr">Français</option>
+					<option value="de">Deutsch</option>
+				</select>
+				<input id="chatMsg" placeholder="Type a message…" />
+				<button id="sendChat"><i class="fa fa-paper-plane"></i></button>
+			</div>
+		</div>
 	</div>
+
+
+
 
 	<!-- === Modal: Search Hotel Rooms === -->
 	<div class="modal" id="myModal">
@@ -772,26 +776,23 @@
 		});
 
 		$(document).ready(function () {
-			// === Your existing handlers (search, filter, viewDetailsBtn, modals, etc.) ===
-			// …
-
-			// === Chat widget handlers ===
-			$("#chatHeader, #chatClose").on("click", () => {
-				$("#chatWidget").toggleClass("open");
+			// Open chat: click the chat icon
+			$("#chatHeader").on("click", function () {
+				$("#chatWidget").removeClass("chat-closed").addClass("chat-open");
+			});
+			// Close chat: click the close (X) button
+			$("#chatClose").on("click", function () {
+				$("#chatWidget").removeClass("chat-open").addClass("chat-closed");
 			});
 
-
-			let convState = null;  // holds the current dialog state
+			// Your chat message sending logic
+			let convState = null;
 
 			$("#sendChat").on("click", function () {
 				const msg = $("#chatMsg").val().trim();
 				if (!msg) return;
-
-				// append the user message
-				$("#chatBody").append(`<div><strong>You:</strong> ${msg}</div>`);
+				$("#chatBody").append(`<div class="you-msg"><strong>You:</strong> ${msg}</div>`);
 				$("#chatMsg").val("");
-
-				// send both the message *and* the current state
 				$.ajax({
 					url: "/api/chat",
 					type: "POST",
@@ -803,33 +804,30 @@
 						language: $("#language-select").val()
 					}),
 					success: data => {
-						// 1) update our state
 						convState = data.state;
-
-						// 2) build the bot bubble
 						const $chat = $("#chatBody");
-						const $bot = $(
-							`<div class="bot-msg">
-				         <strong>Bot:</strong> ${data.message}
-				       </div>`
-						);
+						const $bot = $(`
+					        <div class="bot-msg">
+					            <strong>Bot:</strong> ${data.message}
+					        </div>
+					    `);
 						$chat.append($bot);
 
-						// 3) if there are suggestions, embed them inside the same bubble
+						// --- Disable ALL previous suggestions, always ---
+						$('.suggestions-wrap .suggestion-item').addClass('disabled').attr('disabled', true);
+
+						// --- Add new suggestions (if any), with a unique group id (optional but helps future-proofing) ---
 						if (data.suggestions && data.suggestions.length) {
-							const $suggWrap = $('<div class="suggestions-wrap"></div>');
+							const suggId = `sugg-${Date.now()}`;
+							const $suggWrap = $(`<div class="suggestions-wrap" id="${suggId}"></div>`);
 							data.suggestions.forEach(text => {
-								$suggWrap.append(
-									`<span class="suggestion-item">${text}</span>`
-								);
+								$suggWrap.append(`<span class="suggestion-item">${text}</span>`);
 							});
 							$bot.append($suggWrap);
 						}
 
-						// 4) scroll _after_ everything’s in place
 						$chat.scrollTop($chat.prop("scrollHeight"));
 					},
-
 					error: () => {
 						$("#chatBody").append("<div><em>Sorry, something went wrong.</em></div>");
 					}
@@ -842,7 +840,19 @@
 					return false;
 				}
 			});
+			$(document).on('click', '.suggestion-item', function () {
+				// Only allow clicking if not already disabled
+				if ($(this).hasClass('disabled')) return;
+				// Disable all suggestions in the current group
+				const $wrap = $(this).closest('.suggestions-wrap');
+				$wrap.find('.suggestion-item').addClass('disabled').attr('disabled', true);
+				// Send as message
+				$("#chatMsg").val($(this).text());
+				$("#sendChat").click();
+			});
+
 		});
+
 	</script>
 
 </body>

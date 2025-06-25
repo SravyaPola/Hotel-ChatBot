@@ -31,4 +31,8 @@ public class HotelRoomService {
 	public Optional<HotelRoom> findById(Integer hotelRoomId) {
 		return hotelRoomRepository.findById(hotelRoomId);
 	}
+
+	public Optional<Double> getDiscountForHotelRoom(Integer hotelRoomId) {
+		return hotelRoomRepository.findDiscountById(hotelRoomId);
+	}
 }

@@ -1,217 +1,318 @@
-/* ==========================================================================
-   home.css — “Cosmic Sunset” Theme
-   ========================================================================== */
-
-/* 1. VARIABLES */
 :root {
-	/* Page & panels */
 	--bg-page: #f5f7fa;
-	/* very light gray */
-	--bg-panel: #ffffff;
-	/* pure white */
-	--bg-modals: #eef2f5;
-	/* off-white */
-
-	/* Accents */
-	--bg-accent: linear-gradient(135deg, #84fab0 0%, #8fd3f4 100%);
-	--color-highlight: #2a9df4;
-	/* bright sky blue */
-	--color-secondary: #ff8c94;
-	/* soft coral */
-
-	/* Text & borders */
-	--color-text: #333333;
-	/* dark charcoal */
-	--color-border: rgba(0, 0, 0, 0.1);
-
-	/* Inputs */
-	--color-input-bg: #ffffff;
-	--color-input-border: rgba(0, 0, 0, 0.2);
-
-	/* Shadows */
-	--shadow-panel: 0 8px 16px rgba(0, 0, 0, 0.08);
-	--shadow-card: 0 4px 12px rgba(0, 0, 0, 0.1);
-
-	/* Typography & sizing (keep these) */
-	--font-sans: 'Segoe UI', Roboto, sans-serif;
-	--radius: 8px;
-	--transition: 0.3s ease;
+	--bg-panel: #fff;
+	--bg-modals: #f6f9fb;
+	--bg-accent: linear-gradient(90deg, #fc466b 0%, #3f5efb 100%);
+	--color-highlight: #3f5efb;
+	--color-secondary: #fc466b;
+	--color-success: #22c55e;
+	--color-text: #252733;
+	--color-border: #d6dae1;
+	--color-input-bg: #fff;
+	--color-input-border: #c9d6ff;
+	--shadow-card: 0 8px 32px rgba(60, 60, 110, .10);
+	--shadow-panel: 0 6px 24px rgba(40, 40, 60, .11);
+	--radius: 16px;
+	--transition: .22s cubic-bezier(.68, -0.21, .28, 1.19);
+	--font-sans: 'DM Mono', 'Fira Mono', 'Segoe UI', monospace, Arial, sans-serif;
 }
 
-
-/* 2. RESET & BASE */
-*,
-*::before,
-*::after {
+/* GENERAL RESET & TYPOGRAPHY */
+* {
 	box-sizing: border-box;
 }
 
 body {
-	margin: 0;
-	padding: 0;
-	font-family: var(--font-sans);
 	background: var(--bg-page);
 	color: var(--color-text);
+	font-family: var(--font-sans);
+	margin: 0;
 	line-height: 1.6;
 }
 
+/* PAGE CONTAINER */
 .container {
-	max-width: 1200px;
+	max-width: 1320px;
 	margin: auto;
-	padding: 1rem;
+	padding: 1.5rem;
+}
+
+/* TITLES */
+h1,
+h2,
+h5 {
+	font-family: inherit;
+	font-weight: bold;
+	letter-spacing: .01em;
+	border-bottom: 2px solid var(--color-border);
+	margin-bottom: 1rem;
 }
 
 h1 {
 	font-size: 2.5rem;
-	margin: .5rem 0;
 }
 
 h2 {
-	font-size: 1.8rem;
-	margin: .5rem 0;
+	font-size: 1.7rem;
 }
 
 h5 {
 	font-size: 1.1rem;
-	margin: .5rem 0;
 }
 
-/* 3. SEARCH PANEL */
+/* LOGOUT BUTTON */
+#btnLogout {
+	position: absolute;
+	top: 28px;
+	right: 48px;
+	background: var(--bg-accent);
+	color: #fff;
+	border: none;
+	padding: .7rem 1.7rem;
+	border-radius: 24px;
+	font-size: 1.1em;
+	font-weight: bold;
+	letter-spacing: .06em;
+	box-shadow: 0 2px 14px rgba(40, 40, 60, 0.11);
+	transition: background .22s;
+	cursor: pointer;
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+#btnLogout i {
+	font-size: 1.3em;
+}
+
+#btnLogout:hover {
+	background: #3f5efb;
+}
+
+/* SEARCH PANEL */
 .search-panel {
+	max-width: 98vw;
+	width: 100%;
 	background: var(--bg-panel);
-	border-radius: var(--radius);
+	border-radius: 22px;
 	box-shadow: var(--shadow-panel);
-	padding: 2rem;
-	margin: 2rem 0;
+	padding: 2.2rem 3rem 1.5rem 3rem;
+	margin: 2.5rem auto 2rem auto;
+}
+
+.search-panel h5 {
+	font-size: 1.16rem;
+	margin-bottom: 1.3rem;
+	border-bottom: 1.2px solid var(--color-border);
+}
+
+.form-row.align-items-end {
+	display: flex;
+	flex-wrap: nowrap;
+	align-items: flex-end;
+	gap: 1.4rem;
+}
+
+/* Input column sizing for wide screens */
+.col-3 {
+	flex: 1.7 1 0;
+	min-width: 170px;
+}
+
+.col-2 {
+	flex: 1.1 1 0;
+	min-width: 120px;
+}
+
+.col-search-btn {
+	display: flex;
+	align-items: flex-end;
+	flex: 0 0 145px;
+	justify-content: flex-end;
+	height: 100%;
 }
 
 .search-panel label {
-	display: block;
-	margin-bottom: .25rem;
-	font-size: .9rem;
+	font-weight: 600;
+	margin-bottom: .24rem;
+	display: inline-block;
 }
 
 .search-panel input,
 .search-panel select {
 	width: 100%;
+	border-radius: 10px;
+	border: 1.5px solid var(--color-input-border);
+	padding: .75em 1em;
+	font-size: 1.09em;
 	background: var(--color-input-bg);
-	border: 1px solid var(--color-input-border);
-	color: var(--color-text);
-	border-radius: var(--radius);
-	padding: .75rem 1rem;
-	transition: border-color var(--transition);
+	transition: border .18s;
 }
 
 .search-panel input:focus,
 .search-panel select:focus {
 	border-color: var(--color-highlight);
-	outline: none;
 }
 
+/* SEARCH BUTTON */
 .btn-search {
 	background: var(--bg-accent);
-	background-size: 200%;
-	border: none;
 	color: #fff;
-	padding: .9rem 2rem;
-	font-size: 1rem;
-	font-weight: 600;
-	border-radius: var(--radius);
+	font-weight: 700;
+	font-size: 1.13em;
+	border: none;
+	border-radius: 13px;
+	padding: 1em 2.6em;
 	cursor: pointer;
-	transition: background-position var(--transition);
+	box-shadow: 0 3px 10px rgba(60, 90, 190, .10);
+	transition: background .19s;
+	width: 100%;
+	margin-left: 0;
+	letter-spacing: .01em;
 }
 
 .btn-search:hover {
-	background-position: 100% 0;
+	background: #3f5efb;
 }
 
-/* 4. LAYOUT */
+/* MAIN LAYOUT */
 .row {
 	display: flex;
-	flex-wrap: wrap;
-	gap: 2rem;
+	flex-wrap: nowrap;
+	gap: 2.1rem;
 }
 
+/* SIDEBAR (FILTERS) */
 .sidebar {
-	flex: 1 1 220px;
 	background: var(--bg-panel);
-	padding: 1.5rem;
+	padding: 1.4rem 1.2rem 1.2rem 1.2rem;
 	border-radius: var(--radius);
 	box-shadow: var(--shadow-panel);
+	min-width: 185px;
+	max-width: 225px;
+	width: 100%;
+	font-size: 1em;
+	border: 1.5px solid var(--color-border);
+	position: relative;
 }
 
-.results {
-	flex: 3 1 600px;
+.sidebar h5 {
+	border-bottom: 1.2px solid var(--color-border);
+	margin-bottom: .7rem;
 }
 
-/* 5. FILTERS */
 .form-check {
-	margin-bottom: .75rem;
+	margin-bottom: .38rem;
 }
 
 .form-check-input {
 	accent-color: var(--color-secondary);
-	transform: scale(1.2);
+	transform: scale(1.11);
 	margin-right: .5rem;
 }
 
 .slider-container {
-	margin: 1rem 0;
+	margin: 1.1rem 0 .7rem 0;
+}
+
+.slider-container label {
+	font-weight: bold;
+	color: var(--color-highlight);
+	font-size: 1.04em;
 }
 
 .slider-container input[type=range] {
-	width: 100%;
+	width: 98%;
 	accent-color: var(--color-highlight);
+	height: 4px;
 }
 
 .slider-container p {
-	margin: .5rem 0 0;
-	font-size: .9rem;
+	margin: .32rem 0 0 0;
+	font-size: .97em;
 }
 
-/* 6. HOTEL CARDS */
+.slider-container #priceValue {
+	font-weight: bold;
+	color: var(--color-highlight);
+}
+
+#filterBtn,
+.sidebar .btn,
+.sidebar button {
+	background: var(--bg-accent);
+	color: #fff;
+	font-weight: 700;
+	border: none;
+	border-radius: 13px;
+	padding: .77em 2.2em;
+	cursor: pointer;
+	box-shadow: 0 3px 9px rgba(60, 90, 190, .11);
+	transition: background .16s;
+	width: 100%;
+	font-size: 1em;
+	margin-top: .7em;
+}
+
+#filterBtn:hover,
+.sidebar .btn:hover,
+.sidebar button:hover {
+	background: #fc466b;
+}
+
+/* RESULTS/LIST OF HOTELS (wide and fills space) */
+.results {
+	flex: 1 1 900px;
+	padding-left: 1.2rem;
+	max-width: 1020px;
+}
+
+/* HOTEL CARD */
 .hotel-card {
 	background: var(--bg-panel);
 	border-radius: var(--radius);
 	box-shadow: var(--shadow-card);
-	overflow: hidden;
-	margin-bottom: 2rem;
-	transition: transform var(--transition), box-shadow var(--transition);
+	margin-bottom: 1.25rem;
+	transition: box-shadow .15s, transform .15s;
+	border: 1.3px solid var(--color-border);
+	width: 100%;
+	min-width: 320px;
+	max-width: 100%;
 }
 
 .hotel-card:hover {
-	transform: translateY(-4px);
-	box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+	transform: translateY(-3.5px) scale(1.012);
+	box-shadow: 0 10px 33px rgba(60, 60, 110, .14);
 }
 
 .hotel-card .card-body {
-	padding: 1.5rem;
+	padding: 1.3rem 1.7rem 1.2rem 1.7rem;
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
 }
 
 .hotel-card h5 {
-	font-size: 1.25rem;
-	margin-bottom: .5rem;
-}
-
-.hotel-card p {
-	margin: .25rem 0;
+	font-size: 1.16rem;
+	margin-bottom: .6rem;
 }
 
 .hotel-card .btn {
-	border-radius: var(--radius);
-	transition: background var(--transition), transform var(--transition);
+	border-radius: 11px;
+	padding: .67em 1.7em;
+	font-weight: 600;
+	font-size: 1em;
 }
 
 .hotel-card .btn-secondary {
-	background: var(--color-input-bg);
-	color: var(--color-text);
-	border: 1px solid var(--color-border);
+	background: #f7f7fc;
+	color: #393949;
+	border: 1.2px solid var(--color-border);
 }
 
 .hotel-card .btn-secondary:hover {
 	background: var(--color-secondary);
 	color: #fff;
-	transform: translateY(-2px);
 }
 
 .hotel-card .btn-primary {
@@ -220,16 +321,15 @@ h5 {
 }
 
 .hotel-card .btn-primary:hover {
-	background: #16cbd9;
-	transform: translateY(-2px);
+	background: #3746d0;
 }
 
-/* 7. MODALS */
+/* MODALS */
 .modal-content {
 	background: var(--bg-modals);
-	color: var(--color-text);
 	border-radius: var(--radius);
 	border: none;
+	color: var(--color-text);
 }
 
 .modal-header,
@@ -238,7 +338,7 @@ h5 {
 }
 
 .modal-header .close {
-	font-size: 1.4rem;
+	font-size: 1.45rem;
 	color: var(--color-secondary);
 	opacity: 1;
 }
@@ -250,19 +350,18 @@ h5 {
 .modal-body input,
 .modal-body select {
 	background: var(--color-input-bg);
-	border: 1px solid var(--color-input-border);
+	border: 1.2px solid var(--color-input-border);
 	border-radius: var(--radius);
-	padding: .6rem 1rem;
+	padding: .62rem 1rem;
 	color: var(--color-text);
 }
 
 .modal-body label {
-	font-size: .9rem;
+	font-size: .98rem;
 }
 
 .modal-footer .btn {
 	border-radius: var(--radius);
-	padding: .6rem 1.5rem;
 }
 
 .modal-footer .btn-primary {
@@ -275,174 +374,536 @@ h5 {
 	border: none;
 }
 
-/* 8. CHAT WIDGET */
+/* CHAT WIDGET (LARGE, CENTERED, STICKY INPUT BAR) */
 #chatWidget {
+	z-index: 10011;
+	font-family: 'Fira Mono', 'DM Mono', 'Segoe UI', monospace, Arial, sans-serif;
+}
+
+#chatOverlay {
+	display: none;
 	position: fixed;
-	bottom: 20px;
-	right: 20px;
-	width: 54px;
-	height: 54px;
-	z-index: 2000;
-	transition: all var(--transition);
+	z-index: 10010;
+	top: 0;
+	left: 0;
+	width: 100vw;
+	height: 100vh;
+	background: rgba(40, 40, 60, 0.19);
+}
+
+#chatWidget.chat-open~#chatOverlay {
+	display: block;
+}
+
+#chatWidget.chat-open {
+	position: fixed;
+	top: 50%;
+	left: 50%;
+	transform: translate(-50%, -50%);
+	width: 600px;
+	/* wider for desktop */
+	max-width: 98vw;
+	min-height: 600px;
+	max-height: 85vh;
+	border-radius: 24px;
+	background: #fff;
+	box-shadow: 0 12px 60px rgba(80, 60, 80, 0.22);
+	display: flex;
+	flex-direction: column;
+	z-index: 9999;
+	overflow: hidden;
+}
+
+#chatWidget .chat-panel {
+	display: flex;
+	flex-direction: column;
+	height: 100%;
+	padding: 1.3em 1.2em .5em 1.2em;
+	background: none;
+	border-radius: 24px;
+	flex: 1 1 0;
+	min-height: 0;
+}
+
+#chatWidget .chat-close {
+	position: absolute;
+	top: 20px;
+	right: 24px;
+	background: var(--color-secondary);
+	border: none;
 	border-radius: 50%;
-	background: var(--bg-accent);
+	width: 38px;
+	height: 38px;
+	color: #fff;
+	font-size: 1.5em;
+	cursor: pointer;
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	box-shadow: var(--shadow-card);
+	transition: background .18s;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.11);
 }
 
-#chatWidget.open {
-	width: 600px;
-	height: 600px;
-	bottom: 50%;
-	right: 50%;
-	transform: translate(50%, 50%);
-	border-radius: var(--radius);
-	background: var(--bg-panel);
+#chatWidget .chat-close:hover {
+	background: #d9626a;
 }
 
-#chatHeader i,
-#chatClose i,
-#sendChat i {
-	color: #fff;
-	font-size: 1.2rem;
-	cursor: pointer;
+#chatWidget.chat-closed {
+	position: fixed;
+	bottom: 38px;
+	right: 38px;
+	width: 62px;
+	height: 62px;
+	background: none;
+	box-shadow: none;
+	border-radius: 50%;
 }
 
-#chatClose {
+#chatWidget.chat-closed .chat-panel {
 	display: none;
 }
 
-#chatWidget.open #chatClose {
+#chatWidget.chat-closed .chat-icon {
 	display: flex;
-	position: absolute;
-	top: 12px;
-	right: 12px;
-	width: 32px;
-	height: 32px;
-	background: var(--color-secondary);
-	border-radius: 50%;
-	align-items: center;
-	justify-content: center;
 }
 
-#chatWidget.open #chatBody {
-	display: block;
-	position: absolute;
-	top: 56px;
-	left: 0;
-	width: 100%;
-	height: calc(100% - 130px);
-	padding: 1rem;
+#chatWidget.chat-open .chat-panel {
+	display: flex;
+}
+
+#chatWidget.chat-open .chat-icon {
+	display: none;
+}
+
+.chat-icon {
+	width: 62px;
+	height: 62px;
+	background: var(--bg-accent);
+	color: #fff;
+	border-radius: 50%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 2.2em;
+	cursor: pointer;
+	box-shadow: 0 4px 16px rgba(0, 0, 0, 0.14);
+	transition: box-shadow .2s;
+}
+
+/* Chat body, scrollable, extra padding for bottom bar */
+.chat-body {
+	flex: 1 1 auto;
 	overflow-y: auto;
-	background: var(--bg-modals);
-	border-top-left-radius: var(--radius);
-	border-top-right-radius: var(--radius);
+	padding-bottom: .5em;
+	margin-bottom: .4em;
 }
 
 .bot-msg,
 .you-msg {
-	max-width: 80%;
-	margin-bottom: .75rem;
-	padding: .75rem 1rem;
-	border-radius: var(--radius);
+	max-width: 96%;
+	margin-bottom: 0.19em;
+	padding: .89em 1.3em;
+	border-radius: 18px;
+	font-size: 1.08rem;
 	position: relative;
-	font-size: .95rem;
+	box-shadow: 0 1px 4px rgba(80, 80, 120, .07);
+	font-family: inherit;
+	word-break: break-word;
 }
 
 .bot-msg {
-	background: var(--color-secondary);
-	color: #fff;
-	align-self: flex-start;
-	border-bottom-left-radius: 0;
+	background: linear-gradient(120deg, #f9c5d1 0%, #fbd786 100%);
+	color: #6c2646;
+	text-align: left;
+	font-weight: 500;
 }
 
 .you-msg {
-	background: var(--color-input-bg);
-	color: var(--color-text);
-	align-self: flex-end;
-	border-bottom-right-radius: 0;
-	border: 1px solid var(--color-highlight);
+	background: linear-gradient(90deg, #c2f5e6 0%, #b5c6e0 100%);
+	color: #1d273b;
+	text-align: right;
+	font-weight: bold;
 }
 
+/* Suggestions: compressed, clickable, horizontal wrap, smaller on mobile */
 .suggestions-wrap {
 	display: flex;
 	flex-wrap: wrap;
-	gap: .5rem;
-	margin-top: .5rem;
+	justify-content: center;
+	gap: .43em .43em;
+	margin: 1.08em 0 .6em 0;
 }
 
 .suggestion-item {
-	background: var(--color-highlight);
-	color: #000;
-	padding: .5rem 1rem;
-	border-radius: var(--radius);
+	background: linear-gradient(90deg, #fdad07 0%, #fc466b 100%);
+	color: #fff;
+	border: none;
+	border-radius: 2em;
+	padding: .38em 1.08em;
+	font-family: inherit;
+	font-size: .97em;
 	cursor: pointer;
-	transition: transform var(--transition);
+	margin: 0;
+	transition: background .13s, transform .08s;
+	box-shadow: 0 1.5px 5px rgba(210, 90, 50, .08);
+	text-align: center;
+	white-space: nowrap;
+	font-weight: 700;
+	letter-spacing: .01em;
+	user-select: none;
 }
 
-.suggestion-item:hover {
-	transform: translateY(-2px);
+.suggestion-item:hover:not(.disabled) {
+	background: linear-gradient(90deg, #fc466b 0%, #fdad07 100%);
+	transform: translateY(-1.2px) scale(1.07);
 }
 
-/* 9. RESPONSIVE */
-@media (max-width: 992px) {
-	.row {
-		flex-direction: column;
+.suggestion-item.disabled,
+.suggestion-item[disabled] {
+	opacity: 0.65;
+	pointer-events: none;
+	cursor: not-allowed;
+	filter: grayscale(0.45);
+}
+
+/* Chat input bar: STICKY at the bottom, full width, on white bg */
+.chat-input {
+	display: flex;
+	align-items: center;
+	gap: .7em;
+	width: 100%;
+	margin: 0;
+	padding: .4em .7em .6em .7em;
+	/* enough right/left space */
+	background: none;
+	box-sizing: border-box;
+}
+
+.chat-input select,
+.chat-input input {
+	border-radius: 13px;
+	border: 1.5px solid #fdad07;
+	padding: .66em 1em;
+	font-size: 1.08em;
+	font-family: inherit;
+	background: #fff;
+	box-shadow: 0 1px 2px rgba(0, 0, 0, .03) inset;
+	transition: border .18s;
+}
+
+.chat-input select {
+	min-width: 85px;
+	width: 115px;
+
+}
+
+.chat-input input {
+	flex: 1 1 auto;
+	min-width: 0;
+}
+
+.chat-input button {
+	background: linear-gradient(120deg, #84fab0 0%, #8fd3f4 100%);
+	color: #fff;
+	border: none;
+	border-radius: 50%;
+	width: 45px;
+	height: 45px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 1.37em;
+	cursor: pointer;
+	box-shadow: 0 2px 7px rgba(120, 180, 200, 0.10);
+	transition: background .15s;
+	margin-left: .2em;
+	flex-shrink: 0;
+}
+
+.chat-input button:hover {
+	background: #3f5efb;
+}
+
+/* Responsive: mobile-friendly, wrap form fields, smaller chat, etc. */
+@media (max-width: 1024px) {
+	.container {
+		max-width: 98vw;
 	}
-}
 
-@media (max-width: 576px) {
+	.results {
+		max-width: 98vw;
+	}
+
 	.search-panel {
-		padding: 1rem;
+		padding: 1.4rem 1rem 1rem 1rem;
 	}
 
-	#chatWidget.open {
-		width: 90%;
-		height: 80%;
+	.form-row.align-items-end {
+		flex-wrap: wrap;
+		gap: 1rem;
 	}
 }
 
-/* ─────────────────────────────────────────
-   Chat Input Alignment & Overflow Fix
-───────────────────────────────────────── */
+@media (max-width: 900px) {
+	.form-row.align-items-end {
+		flex-wrap: wrap;
+	}
 
-/* 1) Let the chat container show overflow 
-      so nothing gets clipped when we lift 
-      the plane icon a bit. */
-#chatWidget {
-	overflow: visible;
+	.col-3,
+	.col-2,
+	.col-search-btn {
+		flex-basis: 100%;
+		min-width: 0;
+	}
+
+	.btn-search {
+		width: 100%;
+		margin-top: 1rem;
+	}
+
+	#chatWidget.chat-open {
+		width: 99vw;
+		min-height: 82vh;
+		max-height: 99vh;
+		border-radius: 8px;
+	}
+
+	#chatWidget .chat-panel {
+		display: flex;
+		flex-direction: column;
+		height: 100%;
+		padding: 1em .3em .7em .3em;
+		border-radius: 8px;
+	}
+
+	.bot-msg,
+	.you-msg {
+		font-size: .98em;
+		padding: .77em .6em;
+	}
+
+	.suggestion-item {
+		font-size: .91em;
+		padding: .41em .7em;
+	}
 }
 
-/* 2) Center the input/button vertically
-      instead of hard‐coding a height. */
-#chatWidget.open #chatInput {
+@media (max-width: 700px) {
+	.chat-input {
+		padding: .75em .5em .75em .5em;
+	}
+}
+
+@media (max-width: 600px) {
+	#chatWidget.chat-open {
+		width: 99vw;
+		min-height: 82vh;
+		max-height: 99vh;
+		border-radius: 8px;
+		padding: 0;
+	}
+
+	#chatWidget .chat-panel {
+		padding: .6em .3em .3em .3em;
+		border-radius: 8px;
+	}
+}
+
+/* Extra springy transitions */
+@media (hover: hover) {
+
+	.btn-search,
+	.hotel-card .btn-primary,
+	.hotel-card .btn-secondary,
+	.suggestion-item,
+	.chat-input button {
+		transition: background .14s, color .14s, transform .13s cubic-bezier(.67, -0.17, .27, 1.12);
+	}
+}
+
+#chatWidget.chat-open {
+	width: 430px;
+	max-width: 95vw;
+	max-height: 82vh;
+	min-height: 540px;
+	display: flex;
+	flex-direction: column;
+}
+
+.chat-panel {
+	display: flex;
+	flex-direction: column;
+	flex: 1;
+	height: 100%;
+	min-height: 0;
+}
+
+.chat-body {
+	flex: 1 1 0;
+	overflow-y: auto;
+	margin-bottom: .4em;
+	min-height: 80px;
+	max-height: 350px;
+	/* makes sure input bar is always visible! */
+	padding-bottom: .5em;
+}
+
+.chat-input {
+	display: flex;
+	align-items: center;
+	gap: .7em;
+	background: #fff;
+	padding: .4em .2em .7em .2em;
+	width: 100%;
+}
+
+#chatWidget.chat-open {
+	position: fixed;
+	top: 50%;
+	left: 50%;
+	transform: translate(-50%, -50%);
+	width: 540px;
+	height: 700px;
+	max-width: 99vw;
+	max-height: 94vh;
+	border-radius: 22px;
+	background: #fff;
+	box-shadow: 0 8px 44px rgba(80, 60, 80, 0.22);
+	display: flex;
+	flex-direction: column;
+	z-index: 9999;
+	overflow: hidden;
+}
+
+#chatWidget .chat-panel {
+	display: flex;
+	flex-direction: column;
+	flex: 1 1 auto;
+	padding: 0;
+	background: none;
+	border-radius: 22px;
+	min-height: 0;
+	height: 100%;
+	position: relative;
+}
+
+/* Close button: top right, above content */
+#chatWidget .chat-close {
+	position: absolute;
+	top: 20px;
+	right: 24px;
+	background: #fc466b;
+	border: none;
+	border-radius: 50%;
+	width: 38px;
+	height: 38px;
+	color: #fff;
+	font-size: 1.5em;
+	cursor: pointer;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	transition: background .18s;
+	z-index: 2;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.11);
+}
+
+#chatWidget .chat-close:hover {
+	background: #d9626a;
+}
+
+/* Body is below the close btn, scrolls only this area! */
+.chat-body {
+	flex: 1 1 auto;
+	overflow-y: auto;
+	padding: 1.5em 1.1em 1em 1.1em;
+	margin-top: 0;
+	margin-bottom: 0;
+	min-height: 0;
+	max-height: 100%;
+}
+
+/* Input bar: pinned to BOTTOM of chat, always visible */
+.chat-input {
+	display: flex;
+	align-items: center;
+	gap: .7em;
+	width: 100%;
+	background: #fff;
+	border-top: 1.5px solid #f3d5b0;
+	padding: .8em 1.2em .8em 1.2em;
+	box-sizing: border-box;
 	position: absolute;
 	bottom: 0;
 	left: 0;
 	right: 0;
-	/* ditch the fixed height */
-	height: auto;
-	min-height: 70px;
-	display: flex !important;
+}
+
+.chat-input select {
+	min-width: 90px;
+	width: 115px;
+}
+
+.chat-input input {
+	flex: 1 1 auto;
+	min-width: 0;
+}
+
+.chat-input button {
+	background: linear-gradient(120deg, #84fab0 0%, #8fd3f4 100%);
+	color: #fff;
+	border: none;
+	border-radius: 50%;
+	width: 45px;
+	height: 45px;
+	display: flex;
 	align-items: center;
-	padding: 0.75rem 1rem;
-	box-sizing: border-box;
-	z-index: 2;
-	/* ensure it sits above the bubble backdrop */
+	justify-content: center;
+	font-size: 1.35em;
+	cursor: pointer;
+	box-shadow: 0 2px 7px rgba(120, 180, 200, 0.10);
+	transition: background .15s;
+	margin-left: .2em;
+	flex-shrink: 0;
 }
 
-/* 3) Give the send button a little lift
-      (optional) so it sits flush with the input. */
-#chatWidget.open #sendChat {
-	margin: 0;
-	/* if you had any bottom-negative, remove it */
-	position: relative;
-	z-index: 3;
+.chat-input button:hover {
+	background: #3f5efb;
 }
 
-/* 4) Make sure the close‐icon circle is on top */
-#chatWidget.open #chatClose {
-	z-index: 4;
+/* Body padding at bottom for the input bar! */
+.chat-body {
+	flex: 1 1 auto;
+	overflow-y: auto;
+	padding: 1.5em 1.1em 5.1em 1.1em;
+	/* keep bottom padding for input bar */
+	display: flex;
+	flex-direction: column;
+	gap: 1.18em;
+	/* <-- increase this for more vertical space between messages */
+}
+
+
+/* Keep close button above everything */
+#chatWidget .chat-close {
+	z-index: 10;
+}
+
+/* Responsive on mobile */
+@media (max-width: 700px) {
+	#chatWidget.chat-open {
+		width: 99vw;
+		height: 95vh;
+		max-width: 99vw;
+		max-height: 99vh;
+		border-radius: 12px;
+	}
+
+	.chat-input {
+		padding: .7em .3em .7em .5em;
+	}
+
+	.chat-body {
+		padding: 1em .4em 5.5em .4em;
+	}
 }

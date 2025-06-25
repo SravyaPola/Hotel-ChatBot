@@ -49,8 +49,15 @@ public class WorkflowConfig {
 		m.put(ConversationState.Stage.ASK_CUSTOMER_NAME, new StateConfig(List.of("customerName"), null,
 				ctx -> ConversationState.Stage.SHOW_SUBTOTAL, ctx -> Collections.emptyList()));
 
-		m.put(ConversationState.Stage.SHOW_SUBTOTAL, new StateConfig(List.of("confirmBooking"), null,
-				ctx -> ConversationState.Stage.ASK_ANOTHER, ctx -> Collections.emptyList()));
+		m.put(ConversationState.Stage.SHOW_SUBTOTAL, new StateConfig(List.of("confirmBooking"), null, ctx -> {
+			if (Boolean.TRUE.equals(ctx.getConfirmBook())) {
+				return ConversationState.Stage.LOYALTY_DISCOUNT_OFFER;
+			}
+			return ConversationState.Stage.ASK_ANOTHER;
+		}, ctx -> Collections.emptyList()));
+
+		m.put(ConversationState.Stage.LOYALTY_DISCOUNT_OFFER, new StateConfig(List.of("confirmLoyaltyDiscount"), null,
+				ctx -> ConversationState.Stage.ASK_ANOTHER, ctx -> List.of("Yes", "No")));
 
 		m.put(ConversationState.Stage.ASK_ANOTHER, new StateConfig(List.of("confirmAnother"), null,
 				ctx -> ctx.getConfirmAnother() ? ConversationState.Stage.START : ConversationState.Stage.ASK_PAYMENT,

@@ -60,4 +60,8 @@ public class BookingService {
 		// 3) Save them all in one batch
 		bookingRepo.saveAll(bookings);
 	}
+
+	public boolean userHasBookedHotelBefore(String customerName, Integer hotelId) {
+		return bookingRepo.existsByCustomerNameAndHotelId(customerName, hotelId);
+	}
 }

@@ -9,7 +9,9 @@ public class ConversationState {
 		START, ASK_LOCATION, ASK_CITY, SHOW_ALL_HOTELS, ASK_FILTERS, SHOW_FILTERED_HOTELS, SHOW_HOTEL_DETAILS,
 		ASK_SERVICES, ASK_CONFIRM_BOOK, REVIEW, ASK_PAYMENT, ASK_FEEDBACK, DONE, ASK_DATES, ASK_GUESTS, SHOW_HOTELS,
 		SHOW_AMENITIES, SHOW_SUBTOTAL, ASK_ANOTHER, LIST_HOTELS, ASK_ROOM_TYPE, ASK_NAME, ASK_FILTER_REFINE,
-		ASK_NUM_ROOMS, ASK_CUSTOMER_NAME, FILTER_HOTELS, ASK_AGENT_INFO, AGENT_INFO_RECEIVED, ASK_CONTINUE_BOOKING
+		ASK_NUM_ROOMS, ASK_CUSTOMER_NAME, FILTER_HOTELS, ASK_AGENT_INFO, AGENT_INFO_RECEIVED, ASK_CONTINUE_BOOKING,
+		LOYALTY_DISCOUNT_OFFER,
+
 	}
 
 	private Stage stage = Stage.START;
@@ -77,6 +79,25 @@ public class ConversationState {
 	private String customerName;
 	private Boolean confirmContinue; // <— new
 	// … getters & setters …
+	private Boolean confirmLoyaltyDiscount;
+	// In ConversationState.java
+	private Double subtotalDiscount;
+
+	public Double getSubtotalDiscount() {
+		return subtotalDiscount;
+	}
+
+	public void setSubtotalDiscount(Double d) {
+		subtotalDiscount = d;
+	}
+
+	public Boolean getConfirmLoyaltyDiscount() {
+		return confirmLoyaltyDiscount;
+	}
+
+	public void setConfirmLoyaltyDiscount(Boolean val) {
+		this.confirmLoyaltyDiscount = val;
+	}
 
 	public Boolean getConfirmContinue() {
 		return confirmContinue;
