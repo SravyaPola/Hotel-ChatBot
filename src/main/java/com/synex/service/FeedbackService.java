@@ -26,15 +26,12 @@ public class FeedbackService {
 	 * own row (with a singleton bookingIds list).
 	 */
 	@Transactional
-	public void save(List<Integer> bookingIds, Integer rating, String comments) {
-
-		for (Integer bookingId : bookingIds) {
-			Feedback fb = new Feedback();
-			// since your entity maps bookingIds as an @ElementCollection,
-			// we wrap the single ID in a singleton list:
-			fb.setBookingIds(Collections.singletonList(bookingId));
-			fb.setComments(comments);
-			repo.save(fb);
-		}
+	public void save(Integer rating, String comments) {
+		System.out.println("Saving feedback with rating=" + rating + ", comments=" + comments);
+		Feedback fb = new Feedback();
+		fb.setRating(rating);
+		fb.setComments(comments);
+		repo.save(fb);
 	}
+
 }

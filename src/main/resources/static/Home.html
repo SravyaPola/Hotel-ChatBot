@@ -10,7 +10,7 @@
 	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css" />
 	<script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.min.js"></script>
 	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" />
-
+	<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 	<!-- Your custom theme CSS -->
 	<link rel="stylesheet" href="home.css" />
 </head>
@@ -806,9 +806,14 @@
 					success: data => {
 						convState = data.state;
 						const $chat = $("#chatBody");
+
+						// Parse markdown message into HTML
+						const htmlContent = marked.parse(data.message);
+
+						// Insert bot message with rendered HTML, keep label and styling
 						const $bot = $(`
 					        <div class="bot-msg">
-					            <strong>Bot:</strong> ${data.message}
+					            <strong>Bot:</strong><br/>${htmlContent}
 					        </div>
 					    `);
 						$chat.append($bot);
@@ -840,6 +845,7 @@
 					return false;
 				}
 			});
+
 			$(document).on('click', '.suggestion-item', function () {
 				// Only allow clicking if not already disabled
 				if ($(this).hasClass('disabled')) return;
@@ -849,6 +855,73 @@
 				// Send as message
 				$("#chatMsg").val($(this).text());
 				$("#sendChat").click();
+			});
+
+			function renderHotels(hotels) {
+				const $list = $("#listHotel").empty();
+				if (!hotels.length) {
+					return $list.append("<p>No hotels found.</p>");
+				}
+				hotels.forEach(function (hotel) {
+					const amList = hotel.amenities.join("|");
+					const card = `
+			          <div class="card hotel-card"
+			               data-stars="${hotel.starRating}"
+			               data-price="${hotel.averagePrice}"
+			               data-amenities="${amList}"
+			               style="margin-bottom:20px">
+			            <div class="card-body">
+			              <h5 class="card-title">${hotel.hotelName} (${hotel.starRating})</h5>
+			              <p class="card-text">${hotel.city}, ${hotel.state}</p>
+			              <div class="d-flex justify-content-end">
+			                <button class="btn btn-secondary mr-2 viewDetailsBtn"
+			                        data-hotelid="${hotel.hotelId}"
+			                        data-hotelname="${hotel.hotelName}">
+			                  View Details
+			                </button>
+			                <button class="btn btn-primary openRoomsModal"
+			                        data-hotelid="${hotel.hotelId}"
+			                        data-hotelname="${hotel.hotelName}"
+			                        data-noGuests="${$("#noGuests").val()}"
+			                        data-checkin="${$("#checkInDate").val()}"
+			                        data-checkout="${$("#checkOutDate").val()}">
+			                  Search Rooms
+			                </button>
+			              </div>
+			            </div>
+			          </div>`;
+					$list.append(card);
+				});
+			}
+
+			// --- 2) Load all hotels on page load ---
+			$.ajax({
+				url: "/api/hotels",
+				method: "GET",
+				success: function (hotels) {
+					renderHotels(hotels);
+				},
+				error: function () {
+					$("#listHotel").html("<p class='text-danger'>Failed to load hotels.</p>");
+				}
+			});
+
+			// --- 3) Wire up SEARCH button to re-use that same renderer ---
+			$("#searchBtn").click(function () {
+				const params = {
+					searchHotel: $("#searchLocation").val(),
+					checkIn: $("#checkInDate").val(),
+					checkOut: $("#checkOutDate").val(),
+					noOfRooms: $("#noRooms").val(),
+					noOfGuests: $("#noGuests").val()
+				};
+				$.ajax({
+					url: "/api/search-hotels",
+					method: "GET",
+					data: params,
+					success: renderHotels,
+					error: () => alert("Error fetching hotels.")
+				});
 			});
 
 		});

@@ -179,12 +179,23 @@ public class OpenAiService3 implements NLPService3 {
 				You are a **multilingual hotel-booking assistant**.  **Always** obey these formatting rules for **every** outgoing message:
 
 					Follow this rules mandatory
+					Only use what is in data, do not invent information
 					Markdown only—no HTML or plain text.
 					Hotel lists service pricing must be a numbered list
-					Booking should look like summary, not the paragraph
+					Booking should look like summary in a formatted way, not the paragraph
 					Always end with a clear question or call-to-action in the user’s language.
 					Never add, remove or reorder any data (stars, prices, dates, arrows, punctuation, list order).
-					Vary your phrasing when asking the same thing in million ways
+					Vary your phrasing when asking the same thing in million ways for every conversation
+					Very Important to follow  this below:
+					-- Always for every reply Please format this information in a clear, user-friendly,
+					and visually appealing way with bold for heading dont increase size though, bullet points,
+					and consistent spacing. and same font and same size thoughout
+					Also include a polite prompt at the end asking the user for their followup questions.
+					--Feel free to customize the style or add emojis/bullets as you prefer!
+					Use bullet points for listings.
+					Bold hotel names and prices.
+					Use star emojis and consistent spacing.
+					Add polite, friendly closing lines.
 				"""
 				.formatted(context, missingSlots);
 
@@ -213,7 +224,8 @@ public class OpenAiService3 implements NLPService3 {
 					You are a helpful hotel booking assistant. The user has provided a city and/or state.
 					List the available hotels in a friendly way, mention city/state if present.
 					DO NOT ask the user to pick a hotel. DO NOT mention choosing a number.
-					Just summarize what’s available.
+					Provide in nicely markdown formatted way. Add symbols and emojis whenever needed.
+					Only use data provided, do not add extra information.
 					Data: %s
 					""".formatted(result.data());
 			break;
@@ -226,7 +238,9 @@ public class OpenAiService3 implements NLPService3 {
 
 			prompt = """
 					The user has provided some filters (such as price, stars, or amenities).
+					Provide in nicely markdown formatted way. Add symbols and emojis whenever needed.
 					List the hotels matching these filters in a friendly way, and now invite the user to choose a hotel by number or name.
+					Only use data provided, do not add extra information.
 					Data: %s
 					"""
 					.formatted(Map.of("hotelList_filtered", hotelsFiltered));
@@ -251,6 +265,7 @@ public class OpenAiService3 implements NLPService3 {
 					Politely explain that no hotels matched their filters.
 					Then, show the hotels still available in the chosen city and/or state, and ask the user to pick one by number or name.
 					List the hotels in a friendly way, mention city/state, and invite them to choose.
+					Only use data provided, do not add extra information.
 					Data: %s
 					"""
 					.formatted(result.data());
@@ -263,7 +278,15 @@ public class OpenAiService3 implements NLPService3 {
 
 			prompt = """
 					Here are the hotels available based on your previous selections.
+					You are a hotel booking assistant. Reply *only* in markdown formatted text using:
+					- numbered lists for hotels,
+					- bullet lists for amenities,
+					- headings for sections,
+					- two spaces at end of lines for line breaks,
+					- polite closing questions.
+					Provide in nicely markdown formatted way. Add symbols and emojis whenever needed.
 					Please choose a hotel by number or name.
+					Only use data provided, do not add extra information.
 					Data: %s
 					""".formatted(Map.of("hotels", hotels));
 			break;
@@ -273,7 +296,9 @@ public class OpenAiService3 implements NLPService3 {
 					You are a hotel booking assistant.
 					The user selected a hotel: %s.
 					Show the available services: %s.
+					Provide in nicely markdown formatted way. Add symbols and emojis whenever needed.
 					Ask if they want to add services or proceed to booking.
+					Only use data provided, do not add extra information.
 					""".formatted(data.get("name"), data.get("services"));
 			break;
 		case "extractServices":
@@ -286,6 +311,8 @@ public class OpenAiService3 implements NLPService3 {
 					Extract only the services from that list which the user explicitly mentioned.
 					Return exactly one JSON object with a key "serviceNames" whose value is an array of matching names.
 					If they didn’t mention any, return {"serviceNames":[]} and nothing else.
+					Provide in nicely markdown formatted way. Add symbols and emojis whenever needed.
+					Only use data provided, do not add extra information.
 					""".formatted(String.join(", ", options), input.replace("\"", "\\\""));
 			break;
 		case "serviceNotMatched":
@@ -295,11 +322,9 @@ public class OpenAiService3 implements NLPService3 {
 					The service(s) you requested could not be matched to any available options for the selected hotel.
 					Here are the available services you can choose from:
 					%s
-
 					(If available, prices will be shown.)
-
 					Please pick one or more services by name from the list above, or reply "none" if you do not want any additional services.
-
+					Only use data provided, do not add extra information.
 					Data: %s
 					"""
 					.formatted(services, data);
@@ -313,7 +338,7 @@ public class OpenAiService3 implements NLPService3 {
 					Show the subtotal in data.subtotal.
 					Politely ask if the user wants to continue to room selection or add more services.
 					Only use data provided, do not invent information.
-
+					Provide in nicely markdown formatted way. Add symbols and emojis whenever needed.
 					DATA:
 					%s
 					""".formatted(data);
@@ -325,8 +350,9 @@ public class OpenAiService3 implements NLPService3 {
 					When type is "roomTypeList":
 					List all available room types from data.availableRooms.
 					Ask the user to pick a room type by name or number.
-					Only use data provided, do not add extra information.
+					Only use data provided, do not add extra information. -- very important
 					Try to match from the list with the details provide by the user even if they provide some spell mistake or case or fuzzy .Pick only one.
+					Provide in nicely markdown formatted way. Add symbols and emojis whenever needed.
 					DATA:
 					%s
 					"""
@@ -336,8 +362,10 @@ public class OpenAiService3 implements NLPService3 {
 			List<String> availableRooms = safeList(data, "availableRooms");
 			String tried = (String) data.getOrDefault("triedName", "");
 			prompt = """
+					Provide in nicely formatted markdown language way. Add symbols and emojis whenever needed.
 					The user tried to select the room type: "%s",
 					but it was not found among available options.
+					Only use data provided, do not add extra information.
 					Please politely list the available room types: %s.
 					Ask the user to pick one of these.
 					""".formatted(tried, String.join(", ", availableRooms));
@@ -351,8 +379,9 @@ public class OpenAiService3 implements NLPService3 {
 
 		case "confirmRooms":
 			prompt = """
-					You have selected %s room%s.
-					What is the name for the reservation?
+					User have selected %s room%s.
+					As for the name for the reservation?
+					Only use data provided, do not add extra information.
 					""".formatted(data.get("noRooms"),
 					(Integer.parseInt(data.get("noRooms").toString()) > 1 ? "s" : ""));
 			break;
@@ -363,7 +392,6 @@ public class OpenAiService3 implements NLPService3 {
 					Present a booking summary using all fields in data (hotel name, room, check-in, check-out, guests, rooms, services, subtotal, customerName).
 					Ask the user to confirm the booking (yes/no).
 					Only use what is in data, do not add extra information.
-
 					DATA:
 					%s
 					"""
@@ -372,10 +400,12 @@ public class OpenAiService3 implements NLPService3 {
 		case "loyaltyDiscountOffer":
 			prompt = """
 					    The user is eligible for a loyalty discount.
-					    The discount percent is data.discount (for example, 0.15 means 15%%).
-					    Politely let the user know they are eligible for a {data.discount * 100}%% loyalty discount.
+					    The discount percent is data.discount 
+					    Politely let the user know they are eligible for a loyalty discount.
 					    Ask them if they'd like to apply it to their booking (expect Yes/No).
 					    Do NOT reveal any implementation details.
+					    Only use data provided, do not add extra information.
+					Provide in nicely formatted way. Add symbols and emojis whenever needed.
 					    DATA: %s
 					""".formatted(data);
 			break;
@@ -385,6 +415,7 @@ public class OpenAiService3 implements NLPService3 {
 					You are a hotel booking assistant.
 					The booking is created. The subtotal is $%s.
 					Ask if the user wants to proceed to payment.
+					Only use data provided, do not add extra information.
 					""".formatted(data.get("subtotal"));
 			break;
 
@@ -395,7 +426,8 @@ public class OpenAiService3 implements NLPService3 {
 					Thank the user, confirm the reservation; list all details (hotel, room, check-in, check-out, guests, rooms, services, subtotal, bookingId, customerName) from data.
 					Advise the user to save their booking ID.
 					Ask if they'd like to book another or need further help.
-					Only use what is in data, do not invent information.
+					Only use what is in data, do not invent information
+					Provide in nicely formatted way. Add symbols and emojis whenever needed.
 
 					DATA:
 					%s
@@ -420,6 +452,7 @@ public class OpenAiService3 implements NLPService3 {
 					INSTRUCTION:
 					The user does not want to start another booking and is ready to proceed to payment for their current booking.
 					Politely ask the user to provide payment (simulated, if you're not collecting real payments) or say 'paid' to confirm.
+					Only use data provided, do not add extra information.
 					DATA:
 					%s
 					"""

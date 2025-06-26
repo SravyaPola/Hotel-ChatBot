@@ -75,4 +75,9 @@ public class HotelSearchController {
 		return hotelRepository.findById(id).map(h -> ResponseEntity.ok(h))
 				.orElseGet(() -> ResponseEntity.notFound().build());
 	}
+
+	@GetMapping("/hotels")
+	public ResponseEntity<List<Hotel>> getAllHotels() {
+		return ResponseEntity.ok(hotelRepository.findAll());
+	}
 }

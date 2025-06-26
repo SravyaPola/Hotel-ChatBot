@@ -530,12 +530,13 @@ public class ChatService3 {
 			Map<String, Object> data = new HashMap<>();
 			if (st.getHotelName() != null)
 				data.put("hotelName", st.getHotelName());
-			if (st.getCheckIn() != null)
-				data.put("checkIn", st.getCheckIn());
-			if (st.getCheckOut() != null)
-				data.put("checkOut", st.getCheckOut());
+//			if (st.getCheckIn() != null)
+//				data.put("checkIn", st.getCheckIn());
+//			if (st.getCheckOut() != null)
+//				data.put("checkOut", st.getCheckOut());
+			data.put("hotelRoomId", st.getHotelRoomId());
 			data.put("guests", guests);
-			data.put("rooms", noRooms);
+			data.put("numberOfRooms", noRooms);
 			if (services != null)
 				data.put("services", services);
 			data.put("roomPrice", roomPrice);
@@ -581,31 +582,35 @@ public class ChatService3 {
 					ActionResult loyaltyOffer = new ActionResult("loyaltyDiscountOffer", Map.of("discount", discount));
 					String reply = nlp.renderActionReply(loyaltyOffer, st);
 					return new ChatResponse(reply, false, List.of("Yes", "No"), st);
+				} else {
+					// --- Loyalty check logic END ---
+
+					// Your normal booking creation code:
+					List<String> services = st.getChosenServiceOptions() != null
+							? st.getChosenServiceOptions().stream().map(ServiceOption::getName).toList()
+							: List.of();
+					int guests = Optional.ofNullable(st.getGuests()).orElse(1);
+					int noRooms = Optional.ofNullable(st.getNoRooms()).orElse(1);
+					double subtotal = st.getSubtotal();
+
+					Booking booking = bookingService.create(st.getHotelId(), st.getHotelRoomId(), noRooms, guests,
+							st.getCheckIn(), st.getCheckOut(), st.getCustomerName(), String.join(",", services),
+							subtotal);
+					st.getBookingIds().add(booking.getBookingId());
+					String policies = hotelRoomService.findById(st.getHotelRoomId()).map(HotelRoom::getPolicies)
+							.orElse("");
+					// Send all booking info through ActionResult
+					ActionResult confirmed = new ActionResult("bookingConfirmed",
+							Map.of("bookingId", booking.getBookingId(), "subtotal", subtotal, "hotelName",
+									st.getHotelName(), "customerName", st.getCustomerName(), "roomType",
+									st.getRoomType(), "checkIn", st.getCheckIn(), "guests", guests, "rooms", noRooms,
+									"services", services, "policies", policies));
+					String reply = nlp.renderActionReply(confirmed, st);
+
+					st.setStage(cfg.nextState().apply(st)); // To ASK_ANOTHER
+					return new ChatResponse(reply, false,
+							getSuggestionsForStage(ConversationState.Stage.ASK_ANOTHER, st), st);
 				}
-				// --- Loyalty check logic END ---
-
-				// Your normal booking creation code:
-				List<String> services = st.getChosenServiceOptions() != null
-						? st.getChosenServiceOptions().stream().map(ServiceOption::getName).toList()
-						: List.of();
-				int guests = Optional.ofNullable(st.getGuests()).orElse(1);
-				int noRooms = Optional.ofNullable(st.getNoRooms()).orElse(1);
-				double subtotal = st.getSubtotal();
-
-				Booking booking = bookingService.create(st.getHotelId(), st.getHotelRoomId(), noRooms, guests,
-						st.getCheckIn(), st.getCheckOut(), st.getCustomerName(), String.join(",", services), subtotal);
-				st.getBookingIds().add(booking.getBookingId());
-				String policies = hotelRoomService.findById(st.getHotelRoomId()).map(HotelRoom::getPolicies).orElse("");
-				// Send all booking info through ActionResult
-				ActionResult confirmed = new ActionResult("bookingConfirmed",
-						Map.of("bookingId", booking.getBookingId(), "subtotal", subtotal, "hotelName",
-								st.getHotelName(), "customerName", st.getCustomerName(), "roomType", st.getRoomType(),
-								"checkIn", st.getCheckIn(), "guests", guests, "rooms", noRooms, "services", services,
-								"policies", policies));
-				String reply = nlp.renderActionReply(confirmed, st);
-
-				st.setStage(cfg.nextState().apply(st)); // To ASK_ANOTHER
-				return new ChatResponse(reply, false, getSuggestionsForStage(st.getStage(), st), st);
 			}
 		}
 
@@ -660,25 +665,29 @@ public class ChatService3 {
 
 			ActionResult next;
 			if (Boolean.TRUE.equals(confirmAnother)) {
-
+				// User wants to book another — reset state except booking IDs and start at
+				// ASK_LOCATION
 				List<Integer> kept = new ArrayList<>(st.getBookingIds());
-				// 1) wipe out everything
 				st.reset();
 				st.setBookingIds(kept);
+				st.setStage(ConversationState.Stage.ASK_LOCATION);
 
-				// 2) use your workflow to ask GPT to craft the fresh prompt
 				next = new ActionResult("startNewBooking", Map.of());
 				String reply = nlp.renderActionReply(next, st);
-
-				// 3) suggestions for ASK_LOCATION
 				List<String> suggestions = getSuggestionsForStage(st.getStage(), st);
-				return new ChatResponse(reply, false, suggestions, st);
+				return new ChatResponse(reply, /* done= */ false, suggestions, st);
+
 			} else {
-				st.setStage(cfg.nextState().apply(st)); // Could be END, ASK_FEEDBACK, etc.
+				// User declines to book another — proceed to payment stage next
+				st.setStage(ConversationState.Stage.ASK_PAYMENT);
+
+				// Prompt for payment confirmation
 				next = new ActionResult("proceedToPayment", Map.of("customerName", st.getCustomerName()));
+
+				String reply = nlp.renderActionReply(next, st);
+				List<String> suggestions = getSuggestionsForStage(st.getStage(), st);
+				return new ChatResponse(reply, /* done= */ false, suggestions, st);
 			}
-			String reply = nlp.renderActionReply(next, st);
-			return new ChatResponse(reply, false, getSuggestionsForStage(st.getStage(), st), st);
 		}
 
 		if (stage == ConversationState.Stage.ASK_PAYMENT) {
@@ -718,8 +727,7 @@ public class ChatService3 {
 
 			st.setFeedbackRating(rating);
 			st.setFeedbackComments(comments);
-
-			feedbackService.save(st.getBookingIds(), rating, comments);
+			feedbackService.save(rating, comments);
 
 			ActionResult feedbackSaved = new ActionResult("endBookingSession", Map.of());
 			String reply = nlp.renderActionReply(feedbackSaved, st);
@@ -773,7 +781,8 @@ public class ChatService3 {
 		String reply = nlp.renderActionReply(r, st);
 		st.setStage(nextStage);
 		String follow = nlp.generateQuestion(workflow.get(nextStage).slotsNeeded(), st);
-		return new ChatResponse(reply + "\n\n" + follow, false, List.of(), st);
+		return new ChatResponse(reply + "\n\n" + follow, false,
+				getSuggestionsForStage(ConversationState.Stage.SHOW_HOTELS, st), st);
 	}
 
 	private ChatResponse listHotelsWithIndex(List<Hotel> list, ConversationState st) {
@@ -787,7 +796,8 @@ public class ChatService3 {
 				st.getCity() == null ? "" : st.getCity(), "state", st.getState() == null ? "" : st.getState()));
 		String reply = nlp.renderActionReply(r, st);
 		String follow = nlp.generateQuestion(List.of("hotelId", "hotelName"), st);
-		return new ChatResponse(reply + "\n\n" + follow, false, List.of(), st);
+		return new ChatResponse(reply + "\n\n" + follow, false,
+				getSuggestionsForStage(ConversationState.Stage.SHOW_HOTELS, st), st);
 	}
 
 	private ChatResponse askServices(Hotel h, ConversationState st) {
@@ -872,7 +882,11 @@ public class ChatService3 {
 
 		case ASK_CUSTOMER_NAME -> List.of("Provide the name as in the ID card");
 
-		case SHOW_SUBTOTAL, ASK_PAYMENT, ASK_ANOTHER -> List.of("Yes", "No");
+		case SHOW_SUBTOTAL -> List.of("Yes, Book Now", "No");
+
+		case ASK_ANOTHER -> List.of("Yes, Lets book another", "No");
+
+		case ASK_PAYMENT -> List.of("Yes, Pay now", "No, Pay later");
 
 		case ASK_FEEDBACK -> List.of("1", "2", "3", "4", "5");
 
