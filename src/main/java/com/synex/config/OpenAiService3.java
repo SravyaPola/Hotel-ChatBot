@@ -400,7 +400,7 @@ public class OpenAiService3 implements NLPService3 {
 		case "loyaltyDiscountOffer":
 			prompt = """
 					    The user is eligible for a loyalty discount.
-					    The discount percent is data.discount 
+					    The discount percent is data.discount
 					    Politely let the user know they are eligible for a loyalty discount.
 					    Ask them if they'd like to apply it to their booking (expect Yes/No).
 					    Do NOT reveal any implementation details.
@@ -408,6 +408,24 @@ public class OpenAiService3 implements NLPService3 {
 					Provide in nicely formatted way. Add symbols and emojis whenever needed.
 					    DATA: %s
 					""".formatted(data);
+			break;
+		case "loyaltyDiscountReply":
+			prompt = """
+					INSTRUCTION:
+						When type is "loyaltyDiscountReply":
+						User has availed the discount, Thank them and Show all the details of their booking from the data %s. 
+						Then follow up them with
+						if they wanted to proceed with next booking
+						or keep only one booking
+						Advise the user to save their booking ID.
+						Ask if they'd like to book another or need further help.
+						Only use what is in data, do not invent information
+						Provide in nicely formatted way. Add symbols and emojis whenever needed.
+
+						DATA:
+						%s
+						"""
+					.formatted(data);
 			break;
 
 		case "createBooking":
@@ -423,7 +441,7 @@ public class OpenAiService3 implements NLPService3 {
 			prompt = """
 					INSTRUCTION:
 					When type is "bookingConfirmed":
-					Thank the user, confirm the reservation; list all details (hotel, room, check-in, check-out, guests, rooms, services, subtotal, bookingId, customerName) from data.
+					Thank the user, confirm the reservation; list all details from data %s.
 					Advise the user to save their booking ID.
 					Ask if they'd like to book another or need further help.
 					Only use what is in data, do not invent information
