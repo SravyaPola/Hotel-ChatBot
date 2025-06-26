@@ -406,14 +406,15 @@ public class OpenAiService3 implements NLPService3 {
 					    Do NOT reveal any implementation details.
 					    Only use data provided, do not add extra information.
 					Provide in nicely formatted way. Add symbols and emojis whenever needed.
-					    DATA: %s
+					    DATA:
+					    %s
 					""".formatted(data);
 			break;
 		case "loyaltyDiscountReply":
 			prompt = """
 					INSTRUCTION:
 						When type is "loyaltyDiscountReply":
-						User has availed the discount, Thank them and Show all the details of their booking from the data %s. 
+						User has availed the discount, Thank them and Show all the details of their booking from the data.
 						Then follow up them with
 						if they wanted to proceed with next booking
 						or keep only one booking
@@ -441,7 +442,7 @@ public class OpenAiService3 implements NLPService3 {
 			prompt = """
 					INSTRUCTION:
 					When type is "bookingConfirmed":
-					Thank the user, confirm the reservation; list all details from data %s.
+					Thank the user, confirm the reservation; list all details from data.
 					Advise the user to save their booking ID.
 					Ask if they'd like to book another or need further help.
 					Only use what is in data, do not invent information
@@ -449,8 +450,7 @@ public class OpenAiService3 implements NLPService3 {
 
 					DATA:
 					%s
-					"""
-					.formatted(data);
+					""".formatted(data);
 			break;
 
 		case "startNewBooking":
